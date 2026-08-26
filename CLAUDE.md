@@ -31,10 +31,10 @@ Nothing here is compiled, deployed or tested — the deliverables are Markdown d
 - **`forcedBurn` and `forcedTransfer` never coexist.** `forcedBurn` is defined in `0_CMTATBaseCore` (Light only); `forcedTransfer` and `freezePartialTokens` come from `ERC20EnforcementModule` in `0_CMTATBaseCommon` (every variant *except* Light).
 - **Etherscan dumps are named `<token>_eth_<address>_code`,** where the address is the *implementation* contract the source came from, not the proxy users interact with — `cv_eth_0xf4ccc80c…` is CoinVertible's implementation, whose proxy is `0x5422374B…`. The download tool named both directories after the wrong token and they were renamed by hand, so confirm content when re-downloading rather than trusting the generated name.
 
-## File tree
+## Repository layout
 
 ```
-README.md                     the main deliverable: CMTAT vs 6 stablecoins, 12 sections, 6 comparison tables
+README.md                     the main deliverable: CMTAT vs 6 stablecoins, 10 sections, 6 comparison tables
 stablecoin-doc-issue.md       14 documented errors in CMTAT's own doc/technical/stablecoin.md, with suggested fixes
 vendor/
 ├── README.md                 per-directory guide to each vendored stablecoin and its main files
@@ -46,16 +46,20 @@ vendor/
 ├── cv_eth_0xf4ccc80c…_code/    [Etherscan dump] SG-FORGE CoinVertible — EURCV, USDCV (SmartCoin.sol)
 └── usdt_eth_0xdac17f95…_code/  [Etherscan dump] Tether USDT (TetherToken.sol, Solidity 0.4.17)
 cmtat/
-├── CMTAT/                    [submodule] the token standard — deployment variants in contracts/deployment/
-├── CMTAT-ACE/                [submodule] Chainlink ACE policy-engine token builds (Lite / Standard)
-├── CMTAT-CCIP/               [submodule] Foundry scripts for Chainlink CCIP token pools (no contracts)
-├── CMTAT-Confidential/       [submodule] Zama FHE confidential variant
-├── CMTAT-Factory/            [submodule] CREATE2 factories (Transparent / UUPS / Beacon, Light and Standard)
-├── CMTAT-LayerZero/          [submodule] LayerZero V2 OFT adapters (ERC-7802 and ERC-3643 flavours)
-├── RuleEngine/               [submodule] external transfer-restriction controller
-├── Rules/                    [submodule] the 15 pluggable rules used by RuleEngine
-└── SnapshotEngine/           [submodule] on-chain ERC-20 snapshots
+├── CMTAT/                    [submodule] the token standard (v3.3.0-rc3) — variants in contracts/deployment/
+├── CMTAT-ACE/                [submodule] Chainlink ACE policy-engine token builds, Lite / Standard (v0.3.0)
+├── CMTAT-CCIP/               [submodule] Foundry scripts for Chainlink CCIP token pools, no contracts (untagged)
+├── CMTAT-Confidential/       [submodule] Zama FHE confidential variant (v1.0.0)
+├── CMTAT-Factory/            [submodule] CREATE2 factories, Transparent / UUPS / Beacon (v0.5.0)
+├── CMTAT-LayerZero/          [submodule] LayerZero V2 OFT adapters, ERC-7802 and ERC-3643 (v0.2.0+1)
+├── RuleEngine/               [submodule] external transfer-restriction controller (v3.0.0-rc6)
+├── Rules/                    [submodule] the 15 pluggable rules used by RuleEngine (v0.6.0)
+└── SnapshotEngine/           [submodule] on-chain ERC-20 snapshots (v0.5.0)
 ```
+
+Versions above are the pins recorded in the index; `git submodule status` is authoritative, and `README.md` §1 carries the same pins with commits and dates.
+
+**This layout deliberately does not appear in `README.md`.** That file is published as a standalone PDF, read without the repository around it, so a directory tree would describe something the reader cannot see. Keep repo-structure documentation here.
 
 ## Where the evidence lives
 

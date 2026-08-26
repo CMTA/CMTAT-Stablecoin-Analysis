@@ -8,56 +8,28 @@ The central question this document answers: **for each feature a real stablecoin
 
 ## Contents
 
-1. [Repository layout](#1-repository-layout)
-2. [Sources and versions](#2-sources-and-versions)
-   - [2.1 CMTAT and its companion projects](#21-cmtat-and-its-companion-projects)
-   - [2.2 Stablecoins analysed](#22-stablecoins-analysed)
-3. [How to read the tables](#3-how-to-read-the-tables)
-4. [The CMTAT stack](#4-the-cmtat-stack)
-5. [Comparison — token standards & signature flows](#5-token-standards--signature-flows)
-6. [Comparison — supply control](#6-supply-control-issuance)
-7. [Comparison — compliance & enforcement](#7-compliance--enforcement)
-8. [Comparison — access control & governance](#8-access-control--governance)
-9. [Comparison — upgradeability & lifecycle](#9-upgradeability--lifecycle)
-10. [Comparison — yield, cross-chain and extras](#10-yield-cross-chain-and-extras)
-11. [Gap analysis](#11-gap-analysis)
+1. [Sources and versions](#1-sources-and-versions)
+   - [1.1 CMTAT and its companion projects](#11-cmtat-and-its-companion-projects)
+   - [1.2 Stablecoins analysed](#12-stablecoins-analysed)
+2. [How to read the tables](#2-how-to-read-the-tables)
+3. [The CMTAT stack](#3-the-cmtat-stack)
+4. [Comparison — token standards & signature flows](#4-token-standards--signature-flows)
+5. [Comparison — supply control](#5-supply-control-issuance)
+6. [Comparison — compliance & enforcement](#6-compliance--enforcement)
+7. [Comparison — access control & governance](#7-access-control--governance)
+8. [Comparison — upgradeability & lifecycle](#8-upgradeability--lifecycle)
+9. [Comparison — yield, cross-chain and extras](#9-yield-cross-chain-and-extras)
+10. [Gap analysis](#10-gap-analysis)
 
 ---
 
-## 1. Repository layout
-
-```
-cmtat/                        CMTA projects (git submodules)
-├── CMTAT/                    the token standard itself                  — v3.3.0-rc3
-├── CMTAT-ACE/                Chainlink ACE policy-engine integration    — v0.3.0
-├── CMTAT-CCIP/               Chainlink CCIP deployment scripts           — untagged
-├── CMTAT-Confidential/       Zama FHE confidential variant              — v1.0.0
-├── CMTAT-Factory/            CREATE2 factories (TP / UUPS / Beacon)     — v0.5.0
-├── CMTAT-LayerZero/          LayerZero V2 OFT adapters                  — v0.2.0+1
-├── RuleEngine/               external transfer-restriction controller   — v3.0.0-rc6
-├── Rules/                    the rule library plugged into RuleEngine   — v0.6.0
-└── SnapshotEngine/           on-chain ERC-20 snapshots                  — v0.5.0
-
-vendor/                       reference stablecoin implementations
-├── stablecoin-evm/           Circle — USDC, EURC
-├── paxos-token-contracts/    Paxos — USDP, USDG, PYUSD, PAXG
-├── monerium-smart-contracts/ Monerium — EURe, GBPe, USDe, ISKe
-├── frontier-stable-token/    Wyoming Stable Token Commission — FRNT, wFRNT
-├── cv_eth_0xf4ccc80c…/       SG-FORGE CoinVertible — EURCV, USDCV
-├── usdt_eth_0xdac17f95…/     Tether — USDT
-├── README.md                 per-directory guide and main files
-└── SUMMARY.md                stablecoin-vs-stablecoin comparison (no CMTAT focus)
-```
-
-The two Etherscan-dump directories follow the convention `<token>_eth_<address>_code`, where the address is the **implementation** contract the source was downloaded from. See [`vendor/README.md`](./vendor/README.md) for their contents.
-
 This document compares **CMTAT against the stablecoins**. For a stablecoin-to-stablecoin comparison that does not centre on CMTAT, see [`vendor/SUMMARY.md`](./vendor/SUMMARY.md).
 
-## 2. Sources and versions
+## 1. Sources and versions
 
 Every claim below was read from the code pinned in this repository, not from marketing material or third-party summaries. All submodule pins are the commits recorded in this repository's index, taken from `git submodule status`; run `git submodule update --init --recursive` to reproduce them.
 
-### 2.1 CMTAT and its companion projects
+### 1.1 CMTAT and its companion projects
 
 Everything under [`cmtat/`](./cmtat/): the token standard plus the seven projects that extend it.
 
@@ -81,7 +53,7 @@ The CMTAT and RuleEngine pins are **release candidates**: their `version()` stri
 
 CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
 
-### 2.2 Stablecoins analysed
+### 1.2 Stablecoins analysed
 
 Everything under [`vendor/`](./vendor/): four upstream repositories pinned as submodules and two verified-source dumps taken from Etherscan.
 
@@ -98,7 +70,7 @@ The Etherscan dumps capture a single **implementation** contract each, not a ful
 
 > **Wyoming — `frontier-stable-token`.** The Commission announced a migration from LayerZero to **Chainlink CCIP** in August 2026 ([press release](https://www.prnewswire.com/news-releases/wyoming-stable-token-commission-migrates-to-chainlink-ccip-for-enhanced-operational-security-302854502.html)). This snapshot still reflects the LayerZero architecture, so every FRNT / wFRNT cross-chain statement below describes the OFT design, not the one now in production.
 
-## 3. How to read the tables
+## 2. How to read the tables
 
 CMTAT is not one contract, so each table splits it into **three** columns. That makes it visible at a glance whether a feature is reachable from the variant CMTA actually recommends for stablecoins, from a heavier variant, or only from a companion project.
 
@@ -127,7 +99,7 @@ Symbols: ✅ available · ⚠️ partial, indirect or non-standard · ❌ absent
 
 Stablecoin column abbreviations: **USDC** = Circle, **PAX** = Paxos, **MON** = Monerium, **FRNT** = Wyoming, **CV** = CoinVertible, **USDT** = Tether.
 
-## 4. The CMTAT stack
+## 3. The CMTAT stack
 
 CMTAT is deliberately split across several repositories. Knowing what each one owns is the key to reading the tables.
 
@@ -142,7 +114,7 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 | **CMTAT-ACE** | Alternative token builds (`ComplianceTokenCMTAT*`) that route protected calls through Chainlink's ACE `PolicyEngine`; ships extractors and a `TransferValidationPolicy` that reuses CMTAT `IRule` rules | a different token deployment, not a bolt-on | ❌ built on `CMTATBaseCommon`, not Light's `CMTATBaseCore` |
 | **CMTAT-CCIP** | Foundry scripts to deploy CMTAT behind Chainlink CCIP token pools (BurnMint or LockRelease) and wire lanes, rate limiters and allowlists | CCT admin role + pool registration | ❌ needs ERC-7802 / `CCIPModule` |
 
-### 4.1 What Light actually contains
+### 3.1 What Light actually contains
 
 `0_CMTATBaseCore` bundles the whole Light feature set in one level-0 base:
 
@@ -164,7 +136,7 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 
 ---
 
-## 5. Token standards & signature flows
+## 4. Token standards & signature flows
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -186,7 +158,7 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 
 **ERC-3009 is absent from the entire stack**, Light and companion projects alike, and it is the one signature standard both Circle and Paxos ship. CMTA has it on the roadmap as a dedicated deployment version ([CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346)); the status below reflects the code pinned here, not the roadmap.
 
-## 6. Supply control (issuance)
+## 5. Supply control (issuance)
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -208,7 +180,7 @@ The companion projects answer this comprehensively: `RuleMintAllowance` matches 
 
 Paxos's time-windowed rate limit does have an equivalent, but only through a third architecture: **CMTAT-ACE**'s `VolumeRatePolicy` caps how much an account can move within a rolling window, and attaching it to the `mint` selector reproduces `SupplyControl` + `RateLimit.sol`. That means a different token build (`ComplianceTokenCMTAT*`), not a contract bolted onto an existing deployment.
 
-## 7. Compliance & enforcement
+## 6. Compliance & enforcement
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -240,7 +212,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 **Light gets `forcedBurn` but not `forcedTransfer`; every other variant gets the reverse.** Paxos and CoinVertible can freeze then wipe; USDT can destroy. No single CMTAT deployment can both burn from a frozen address and move its tokens elsewhere.
 
-## 8. Access control & governance
+## 7. Access control & governance
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -253,7 +225,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 **Reading.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`. The gap is governance *tooling*: **Paxos is the only project that ships a `TimelockController` with the token** and annotates which roles can redirect funds. CMTAT's `Ownable2Step` safety exists only on the companion contracts, so it is unavailable to a Light deployment, where `DEFAULT_ADMIN_ROLE` transfers take effect immediately.
 
-## 9. Upgradeability & lifecycle
+## 8. Upgradeability & lifecycle
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -276,7 +248,7 @@ Two concrete misses, both variant-independent:
 * **No UUPS Light variant** exists, and `CMTATUpgradeableUUPS` is built on the Standard branch, so a Light issuer wanting UUPS must write their own.
 * **Nothing in the entire stack can recover a foreign ERC-20 sent to the token contract.** Circle, Paxos and Wyoming all ship it; CMTAT, RuleEngine, Rules, SnapshotEngine, CMTAT-Factory and CMTAT-LayerZero all lack it.
 
-## 10. Yield, cross-chain and extras
+## 9. Yield, cross-chain and extras
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -302,9 +274,9 @@ Two concrete misses, both variant-independent:
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
-## 11. Gap analysis
+## 10. Gap analysis
 
-### 11.1 Stablecoin features the CMTA stack covers outside the token
+### 10.1 Stablecoin features the CMTA stack covers outside the token
 
 These are all available to a CMTAT issuer, but none of them live in the token contract: each needs a companion project deployed and wired alongside it. The last column is the one that matters in practice, because CMTA's own guidance points stablecoin issuers at Light.
 
@@ -325,7 +297,7 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 
 **`CMTAT-Factory` is the only companion project a Light deployment can definitely use.** RuleEngine and every rule need `setRuleEngine`, which Light does not have; SnapshotEngine needs either `setSnapshotEngine` (also absent) or its in-token variants, which are built on `CMTATBaseRuleEngine` rather than on Light's `CMTATBaseCore`. CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
 
-### 11.2 Stablecoin features the CMTA ecosystem does not provide
+### 10.2 Stablecoin features the CMTA ecosystem does not provide
 
 The genuine gaps: absent from every CMTAT variant **and** from all seven companion projects, so an issuer who needs one has to build it.
 
@@ -340,7 +312,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 | **`forcedBurn` and `forcedTransfer` together** | Paxos, CoinVertible (freeze → wipe) | Both exist in the stack, but never in one deployment: `forcedBurn` is Light-only, `forcedTransfer` is every-variant-but-Light. The gap is the combination, not either function. |
 | **Timelock shipped with the token** | Paxos | No CMTA project ships one. OpenZeppelin's `TimelockController` drops in, so this is the cheapest of the gaps to close. |
 
-### 11.3 CMTAT features no stablecoin in `vendor/` has
+### 10.3 CMTAT features no stablecoin in `vendor/` has
 
 * **ERC-1404 restriction codes** and pre-trade `canTransfer` / `detectTransferRestriction` views — every stablecoin here simply reverts.
 * **Composable rule stacking** — Monerium and Wyoming each have *one* pluggable hook; RuleEngine runs an ordered list of them.
@@ -358,7 +330,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 * **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor/`.
 * **Mutable `name` / `symbol`** post-deployment.
 
-### 11.4 Practical conclusion for a stablecoin issuer
+### 10.4 Practical conclusion for a stablecoin issuer
 
 CMTAT's own documentation recommends the **Light** variant for stablecoins. That recommendation holds only for a specific shape of stablecoin.
 
