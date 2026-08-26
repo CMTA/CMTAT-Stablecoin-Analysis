@@ -75,6 +75,8 @@ Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream r
 
 The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md).
 
+> **This is a snapshot, not the live on-chain state.** Every statement about a stablecoin below describes the source pinned in the table above, at the date shown. It may already differ from what is deployed. Five of the six sit behind upgradeable proxies (transparent for USDC, UUPS for Paxos, Monerium, Wyoming and CoinVertible), so the implementation an address serves today can be replaced without any change to the repository this analysis reads; USDT is not upgradeable but can redirect every entry point through `deprecate()`. The upstream repositories also move on, and the two Etherscan dumps were taken on a single day from an implementation the proxy pointed at then. Re-check the deployed bytecode before relying on any of this operationally.
+
 > **Wyoming — `frontier-stable-token`.** The Commission announced a migration from LayerZero to **Chainlink CCIP** in August 2026 ([press release](https://www.prnewswire.com/news-releases/wyoming-stable-token-commission-migrates-to-chainlink-ccip-for-enhanced-operational-security-302854502.html)). This snapshot still reflects the LayerZero architecture, so every FRNT / wFRNT cross-chain statement below describes the OFT design, not the one now in production.
 
 ## 2. How to read the tables
