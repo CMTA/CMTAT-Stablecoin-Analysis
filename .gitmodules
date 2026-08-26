@@ -37,3 +37,6 @@
 [submodule "cmtat/CMTAT-ACE"]
 	path = cmtat/CMTAT-ACE
 	url = https://github.com/CMTA/CMTAT-ACE
+[submodule "vendor-chainlink/chainlink-ace"]
+	path = vendor-chainlink/chainlink-ace
+	url = https://github.com/smartcontractkit/chainlink-ace

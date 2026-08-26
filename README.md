@@ -10,7 +10,8 @@ The central question this document answers: **for each feature a real stablecoin
 
 1. [Sources and versions](#1-sources-and-versions)
    - [1.1 CMTAT and its companion projects](#11-cmtat-and-its-companion-projects)
-   - [1.2 Stablecoins analysed](#12-stablecoins-analysed)
+   - [1.2 Third-party dependencies read directly](#12-third-party-dependencies-read-directly)
+   - [1.3 Stablecoins analysed](#13-stablecoins-analysed)
 2. [How to read the tables](#2-how-to-read-the-tables)
 3. [The CMTAT stack](#3-the-cmtat-stack)
 4. [Comparison — token standards & signature flows](#4-token-standards--signature-flows)
@@ -47,13 +48,21 @@ Everything under [`cmtat/`](./cmtat/): the token standard, the seven companion p
 
 The CMTAT and RuleEngine pins are **release candidates**: their `version()` strings report `3.3.0` and `3.0.0`, but the tagged commits are `v3.3.0-rc3` and `v3.0.0-rc6`.
 
-> **Chainlink's ACE policy library is not vendored here.** `CMTAT-ACE` ships its own extractors, `TransferValidationPolicy` and token builds, all read for this comparison, but the policies it attaches (`VolumeRatePolicy`, `SecureMintPolicy`, `PausePolicy`, …) come from the `@chainlink/ace` npm package, which is not installed in this tree. Claims about those policies are reproduced from [`cmtat/CMTAT-ACE/README.md`](./cmtat/CMTAT-ACE/README.md), not verified against their source. `CMTAT-ACE` also states it has had **no formal audit**, static analysis and AI review only, and `CMTAT-CCIP` is unaudited testnet tooling.
+> **Neither Chainlink integration is audited.** `CMTAT-ACE` states it has had **no formal audit**, static analysis and AI review only; `CMTAT-CCIP` is unaudited testnet tooling derived from Chainlink's examples repository.
 
 > **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)).
 
 CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor-stablecoins/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
 
-### 1.2 Stablecoins analysed
+### 1.2 Third-party dependencies read directly
+
+| Project | Why it is here | Tag | Commit | Date |
+| --- | --- | --- | --- | --- |
+| [`chainlink-ace`](./vendor-chainlink/chainlink-ace/) | The ACE `PolicyEngine` and its policy library, which `CMTAT-ACE` attaches but does not contain | `v1.2.0`+1 | `60f0450` | 2026-07-23 |
+
+Every ACE policy named in this document (`VolumeRatePolicy`, `SecureMintPolicy`, `PausePolicy`, `MaxPolicy`, `VolumePolicy`, `IntervalPolicy`, `RoleBasedAccessControlPolicy`, `AllowPolicy`, `RejectPolicy`, `BypassPolicy`) was read from `packages/policy-management/src/policies/`.
+
+### 1.3 Stablecoins analysed
 
 Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and two verified-source dumps taken from Etherscan.
 
@@ -166,7 +175,7 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
 | Role-gated burn | ✅ `BURNER_ROLE` | ✅ (+ `BURNER_FROM`, `BURNER_SELF`) | — | ⚠️ minter, own balance only | ✅ | ✅ `system` | ✅ `BURNER_ROLE` | ✅ registrar only | ⚠️ `owner` |
 | Mint to an arbitrary address | ✅ | ✅ | — | ✅ (within allowance) | ✅ | ✅ | ✅ | ✅ | ❌ `issue()` credits `owner` only |
 | **Per-minter mint allowance** | ❌ | ❌ in-token | ✅ **Rules** `RuleMintAllowance` — `setMintAllowance`, `increase`/`decreaseMintAllowance`, decremented per mint | ✅ `minterAllowance` | ✅ | ✅ + global cap | ❌ | ❌ | ❌ |
-| Rate-limited minting (time window) | ❌ | ❌ | ✅ **CMTAT-ACE** `VolumeRatePolicy` — per-account cumulative cap in a rolling window; `RuleMintAllowance` is a quota with no time dimension | ❌ | ✅ `RateLimit.sol` | ❌ | ❌ | ❌ | ❌ |
+| Rate-limited minting (time window) | ❌ | ❌ | ⚠️ **CMTAT-ACE** `VolumeRatePolicy` caps issuance per **recipient** per period, not per minter (see below) | ❌ | ✅ `RateLimit.sol` | ❌ | ❌ | ❌ | ❌ |
 | Max total supply cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxTotalSupply` (+ `…ERC3643`) | ❌ | ❌ | ⚠️ via allowance cap | ❌ | ❌ | ❌ |
 | Per-call amount cap / ticket size | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `MaxPolicy`, `VolumePolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Proof-of-reserve-backed minting** | ❌ | ❌ in-token | ✅ **Rules** `RuleChainlinkPoR`, or **CMTAT-ACE** `SecureMintPolicy` — both cap minting at a Chainlink PoR feed | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -178,7 +187,7 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
 
 The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor-stablecoins/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls has to move to Standard or Permit and pay roughly 11 KiB of extra bytecode plus two external contracts.
 
-Paxos's time-windowed rate limit does have an equivalent, but only through a third architecture: **CMTAT-ACE**'s `VolumeRatePolicy` caps how much an account can move within a rolling window, and attaching it to the `mint` selector reproduces `SupplyControl` + `RateLimit.sol`. That means a different token build (`ComplianceTokenCMTAT*`), not a contract bolted onto an existing deployment.
+**Paxos's rate limit still has no off-the-shelf equivalent.** CMTAT-ACE's `VolumeRatePolicy` comes close but does not match it, on two counts. It keys on an address supplied by the extractor, and for `mint(address,uint256)` the shipped `MintBurnExtractor` exports the **recipient**, never the caller, so attaching it to `mint` caps how much each address can receive per period rather than how much a minter can issue; bounding the minter would need a custom extractor. And the two use different mechanics: `VolumeRatePolicy` uses a fixed tumbling period (`block.timestamp / timePeriodDuration`), while Paxos's `RateLimit.sol` is a continuously refilling bucket (`refillPerSecond`), which never resets a full allowance at a boundary.
 
 ## 6. Compliance & enforcement
 
@@ -196,7 +205,7 @@ Paxos's time-windowed rate limit does have an equivalent, but only through a thi
 | **Sanctions-oracle screening** | ❌ | ❌ in-token | ✅ **Rules** `RuleSanctionsList` (Chainalysis), reusable as an ACE policy via `TransferValidationPolicy` | ❌ | ❌ | ❌ | ✅ via registry | ❌ | ❌ |
 | Pluggable transfer-rule engine | ❌ **no `setRuleEngine`** | ✅ all except `Allowlist` | ✅ **RuleEngine** is that engine | ❌ | ❌ | ✅ `IValidator` | ✅ `IAccessRegistry` | ❌ | ❌ |
 | Per-holder balance cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxBalance` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Per-holder rolling volume cap | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `VolumeRatePolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Per-holder volume cap per period | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `VolumeRatePolicy` (fixed tumbling period) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Trading-hours / settlement window | ❌ | ❌ | ✅ **CMTAT-ACE** `IntervalPolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Externalised pause and RBAC | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `PausePolicy`, `RoleBasedAccessControlPolicy` (Standard variant) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Compliance change without redeploy | ❌ | ⚠️ swap the RuleEngine | ✅ **CMTAT-ACE** — attach / detach / reorder policies by governance | ❌ | ❌ | ⚠️ swap the validator | ⚠️ swap the registry | ❌ | ❌ |
@@ -292,7 +301,7 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 | Deterministic cross-chain addresses | none — all solve it out-of-band | ✅ **CMTAT-Factory** (CREATE2) | 🏭 **yes** |
 | Fleet-wide upgrade of many tokens | none — all upgrade per token | ✅ **CMTAT-Factory** beacon factories | 🏭 **yes** |
 | LayerZero OFT bridging | Wyoming | ✅ **CMTAT-LayerZero** adapters | ⚠️ recommended adapter needs ERC-7802; the fallback is untested on Light |
-| Time-windowed rate limiting | Paxos `RateLimit.sol` | ✅ **CMTAT-ACE** `VolumeRatePolicy` | ❌ separate token build |
+| Per-recipient volume cap per period | none | ✅ **CMTAT-ACE** `VolumeRatePolicy` | ❌ separate token build |
 | Compliance changed by configuration, not upgrade | Monerium, Wyoming (one hook each) | ✅ **CMTAT-ACE** policy attach/detach/reorder | ❌ separate token build |
 
 **`CMTAT-Factory` is the only companion project a Light deployment can definitely use.** RuleEngine and every rule need `setRuleEngine`, which Light does not have; SnapshotEngine needs either `setSnapshotEngine`, also absent, or its in-token variants, which start from a heavier CMTAT base. CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
@@ -304,6 +313,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 | Feature | Who has it | Notes |
 | --- | --- | --- |
 | **ERC-3009 `transferWithAuthorization`** | USDC, Paxos | The main payments-integration gap. Not in any CMTAT variant, nor in any of the seven companion projects. **Planned**: CMTA tracks it as a dedicated deployment version in [issue #346](https://github.com/CMTA/CMTAT/issues/346). |
+| **Per-minter rate limiting** | Paxos `RateLimit.sol` | `RuleMintAllowance` is a quota with no time dimension. CMTAT-ACE's `VolumeRatePolicy` is time-based but keys on the mint recipient, not the minter, so bounding a minter needs a custom ACE extractor. |
 | **Rescue / salvage of foreign tokens** | USDC, Paxos, Wyoming | Absent from CMTAT *and* all seven companion projects. |
 | **Native yield / rebasing balances** | Paxos USDG | No CMTAT equivalent; snapshots address distribution, not accrual. |
 | **ERC-4626 yield wrapper** | Wyoming wFRNT | Would have to be built on top of CMTAT. |
@@ -347,7 +357,7 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 
 **The competitive configuration is Standard or Permit + RuleEngine + Rules**, which matches USDC and Monerium feature for feature and adds composable rule stacking neither has, at a reported 22–23 KiB plus two external contracts, roughly double Light's footprint.
 
-**Three gaps survive every configuration** and must be built by the issuer: **ERC-3009**, **foreign-token rescue**, and **yield accrual**. Only ERC-3009 has a published plan, as a dedicated deployment version in [CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346). Time-windowed rate limiting is no longer one of them, since `CMTAT-ACE`'s `VolumeRatePolicy` covers it, but only by deploying a different token build.
+**Four gaps survive every configuration** and must be built by the issuer: **ERC-3009**, **per-minter rate limiting**, **foreign-token rescue**, and **yield accrual**. Only ERC-3009 has a published plan, as a dedicated deployment version in [CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346).
 
 ---
 

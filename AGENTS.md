@@ -45,6 +45,8 @@ vendor-stablecoins/
 ├── frontier-stable-token/    [submodule] Wyoming — FRNT/wFRNT (Fireblocks ERC-20F, LayerZero OFT, Solana)
 ├── cv_eth_0xf4ccc80c…_code/    [Etherscan dump] SG-FORGE CoinVertible — EURCV, USDCV (SmartCoin.sol)
 └── usdt_eth_0xdac17f95…_code/  [Etherscan dump] Tether USDT (TetherToken.sol, Solidity 0.4.17)
+vendor-chainlink/
+└── chainlink-ace/            [submodule] Chainlink ACE PolicyEngine + policy library (v1.2.0+1) — the policies CMTAT-ACE attaches
 cmtat/
 ├── CMTAT/                    [submodule] the token standard (v3.3.0-rc3) — variants in contracts/deployment/
 ├── CMTAT-ACE/                [submodule] Chainlink ACE policy-engine token builds, Lite / Standard (v0.3.0)
@@ -66,7 +68,7 @@ Versions above are the pins recorded in the index; `git submodule status` is aut
 - **CMTAT inheritance chain:** `cmtat/CMTAT/contracts/modules/[0-8]_CMTATBase*.sol` — the digit is the level, and it decides which deployment variant gets which module.
 - **CMTAT deployment variants:** `cmtat/CMTAT/contracts/deployment/` — `light/`, `permit/`, `allowlist/`, `snapshot/`, `ERC1363/`, `ERC7551/`, `holderList/`, `debt/`, plus `CMTATStandardStandalone.sol`, `CMTATStandardUpgradeable.sol`, `CMTATUpgradeableUUPS.sol`.
 - **The rule catalogue:** `cmtat/Rules/README.md` §"The rules" — 15 rules with their ERC-1404 restriction codes.
-- **The ACE policy catalogue:** `cmtat/CMTAT-ACE/README.md` §"Compliance Policies" — note the policies themselves live in the `@chainlink/ace` npm package, which is **not** installed in this tree, so those rows are upstream claims rather than read source.
+- **The ACE policy catalogue:** `vendor-chainlink/chainlink-ace/packages/policy-management/src/policies/` holds the policy sources; `cmtat/CMTAT-ACE/README.md` §"Compliance Policies" maps them to CMTAT selectors. Which address a policy keys on depends on the **extractor** configured for that selector (`cmtat/CMTAT-ACE/contracts/modules/chainlink-ace/custom/`), so read the extractor before asserting what a policy bounds.
 - **Upstream comparison under review:** `cmtat/CMTAT/doc/technical/stablecoin.md` and the tokenized-fund table at `cmtat/CMTAT/doc/README.md:267`.
 - **Version pins:** `git submodule status`, and the table in `README.md` §2.
 
