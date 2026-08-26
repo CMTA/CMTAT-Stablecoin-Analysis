@@ -183,11 +183,14 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
 | Atomic burn-then-mint | ✅ `burnAndMint` | ✅ | — | ❌ | ❌ | ⚠️ `recover` | ❌ | ❌ | ❌ |
 | Mint/burn allowed while paused | ❌ | ❌ | — | ❌ | ✅ by design | n/a (no pause) | ❌ | ❌ | ❌ |
 
-**Reading.** Light gates minting on `MINTER_ROLE` and nothing else: no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
+**Reading.**
 
-The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor-stablecoins/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls moves to Standard or Permit, which adds roughly 11 KiB of bytecode and two external contracts to deploy and govern.
-
-**Paxos's rate limit still has no off-the-shelf equivalent.** CMTAT-ACE's `VolumeRatePolicy` comes close but does not match it, on two counts. It keys on an address supplied by the extractor, and for `mint(address,uint256)` the shipped `MintBurnExtractor` exports the **recipient**, never the caller, so attaching it to `mint` caps how much each address can receive per period rather than how much a minter can issue; bounding the minter would need a custom extractor. And the two use different mechanics: `VolumeRatePolicy` uses a fixed tumbling period (`block.timestamp / timePeriodDuration`), while Paxos's `RateLimit.sol` is a continuously refilling bucket (`refillPerSecond`), which never resets a full allowance at a boundary.
+* **Light gates minting on `MINTER_ROLE` and nothing else** — no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
+* **The companion projects close most of the gap.** `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` ties issuance to an on-chain reserve attestation, which none of the six stablecoins does.
+  * Every one of those rules needs the RuleEngine, so none of it is reachable from Light. An issuer who wants USDC-grade minter controls moves to Standard or Permit, which adds roughly 11 KiB of bytecode and two external contracts to deploy and govern.
+* **Paxos's rate limit has no off-the-shelf equivalent.** CMTAT-ACE's `VolumeRatePolicy` is the closest thing in the stack, and differs on two counts:
+  * *Wrong subject.* It keys on an address supplied by the extractor, and for `mint(address,uint256)` the shipped `MintBurnExtractor` exports the **recipient**, never the caller. Attaching it to `mint` caps how much each address can receive per period, not how much a minter can issue; bounding the minter needs a custom extractor.
+  * *Different mechanics.* `VolumeRatePolicy` uses a fixed tumbling period (`block.timestamp / timePeriodDuration`); Paxos's `RateLimit.sol` is a continuously refilling bucket (`refillPerSecond`), which never restores a full allowance at a boundary.
 
 ## 6. Compliance & enforcement
 
@@ -213,11 +216,14 @@ The companion projects answer this comprehensively: `RuleMintAllowance` matches 
 | Identity registry / KYC binding | ❌ | ✅ ERC-3643 slot | ✅ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` | ❌ | ❌ | ❌ | ⚠️ off-chain | ❌ | ❌ |
 | Standardised enforcement events | ⚠️ `ForcedTransfer` event only | ✅ ERC-7551 / ERC-7943 | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-**Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance. It is a faithful, modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views, which USDT lacks. That is enough for a plain fiat stablecoin, and it is the case CMTA's documentation makes.
+**Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. That is enough for a plain fiat stablecoin, and it is the case CMTA's documentation makes.
 
 Everything beyond that lives in `Rules`: shared blacklists, sanctions screening, whitelists, balance caps, per-transfer approval, identity binding. **All of it requires leaving Light.** Once you do, the model differs from every stablecoin here: Monerium and Wyoming each have *one* pluggable hook, while the RuleEngine runs an ordered, composable stack of them.
 
-**CMTAT now has three compliance architectures, not two.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes: **Lite**, which swaps the RuleEngine for the PolicyEngine on transfer validation and keeps CMTAT's roles; and **Standard**, which is policy-authoritative: ACE gates mint, burn, transfer, enforcement and admin, and the token drops `AccessControlUpgradeable` for `OwnableUpgradeable`. That last point is a real trade-off: the Standard variant gives up the granular RBAC that is otherwise one of CMTAT's advantages over USDC and USDT, moving authorisation into policies.
+**CMTAT has three compliance architectures, not two.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes:
+
+* **Lite** — swaps the RuleEngine for the PolicyEngine on transfer validation, and keeps CMTAT's roles.
+* **Standard** — policy-authoritative: ACE gates mint, burn, transfer, enforcement and admin, and the token drops `AccessControlUpgradeable` for `OwnableUpgradeable`. That is a real trade-off, giving up the granular RBAC that is otherwise one of CMTAT's advantages over USDC and USDT.
 
 **Light gets `forcedBurn` but not `forcedTransfer`; every other variant gets the reverse.** Paxos and CoinVertible can freeze then wipe; USDT can destroy. No single CMTAT deployment can both burn from a frozen address and move its tokens elsewhere.
 
@@ -232,7 +238,11 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 | Timelock shipped in-repo | ❌ | ❌ | ❌ | ❌ | ✅ `timelock-controller/` | ❌ | ❌ | ❌ | ❌ |
 | Roles annotated with fund-redirection risk | ⚠️ `access-control.md` | ⚠️ `access-control.md` | — | ❌ | ✅ `Roles.sol` | ⚠️ `tokendesign.md` | ⚠️ README | ❌ | ❌ |
 
-**Reading.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`. The gap is governance *tooling*: **Paxos is the only project that ships a `TimelockController` with the token** and annotates which roles can redirect funds. CMTAT's `Ownable2Step` safety exists only on four of the companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory), never on the token itself, so it is unavailable to any deployment: `DEFAULT_ADMIN_ROLE` transfers take effect immediately. CMTAT-LayerZero's adapters use plain `Ownable`, and CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
+**Reading.**
+
+* **Role separation favours CMTAT.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`.
+* **Governance tooling favours Paxos.** It is the only project that ships a `TimelockController` with the token, and the only one that annotates which roles can redirect funds.
+* **`Ownable2Step` never reaches the token.** It exists on four companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory) but not on CMTAT itself, so `DEFAULT_ADMIN_ROLE` transfers take effect immediately in *every* deployment, Light or not. CMTAT-LayerZero's adapters use plain `Ownable`; CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
 
 ## 8. Upgradeability & lifecycle
 
@@ -250,7 +260,10 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 | Version exposed on-chain | ✅ `version()` | ✅ | ✅ `VersionModule` everywhere | ❌ | ❌ | ⚠️ `CONTRACT_ID()` | ❌ | ✅ `version()` | ❌ |
 | Irreversible shutdown | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` |
 
-**Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor-stablecoins/` has: **beacon-proxy fleet upgrades** (the natural fit for a multi-currency issuer — Monerium runs four tokens, Paxos four) and **CREATE2 deterministic addresses** (the same token address on every chain, which every cross-chain stablecoin here solves out-of-band).
+**Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor-stablecoins/` has:
+
+* **beacon-proxy fleet upgrades** — the natural fit for a multi-currency issuer; Monerium runs four tokens, Paxos four;
+* **CREATE2 deterministic addresses** — the same token address on every chain, which every cross-chain stablecoin here solves out-of-band.
 
 Two concrete misses, both variant-independent:
 
@@ -279,7 +292,10 @@ Two concrete misses, both variant-independent:
 | Transfer fee | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (set to 0) |
 | Redemption modelled on-chain | ⚠️ burn | ⚠️ burn | ⚠️ `RuleConditionalTransferLight` can gate it | ⚠️ burn | ⚠️ burn | ⚠️ signature-gated burn | ⚠️ burn | ✅ redemption addresses | ⚠️ `redeem` |
 
-**Reading.** Light is deliberately stripped of all of this, and for a plain fiat stablecoin that is the right call: none of the six stablecoins has documents, snapshots or holder lists either. What Light also gives up, less obviously, is **cross-chain**: ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Given that five of the six stablecoins here are multi-chain (CoinVertible is the exception), that is the most likely reason a stablecoin issuer would have to leave Light for reasons unrelated to compliance.
+**Reading.**
+
+* **Light is stripped of all of this, and for a plain fiat stablecoin that is the right call.** None of the six stablecoins has documents, snapshots or holder lists either.
+* **What Light also gives up, less obviously, is cross-chain.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the six stablecoins here are multi-chain (CoinVertible is the exception), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
@@ -304,7 +320,11 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 | Per-recipient volume cap per period | none | ✅ **CMTAT-ACE** `VolumeRatePolicy` | ❌ separate token build |
 | Compliance changed by configuration, not upgrade | Monerium, Wyoming (one hook each) | ✅ **CMTAT-ACE** policy attach/detach/reorder | ❌ separate token build |
 
-**`CMTAT-Factory` is the only companion project a Light deployment can definitely use.** RuleEngine and every rule need `setRuleEngine`, which Light does not have; SnapshotEngine needs either `setSnapshotEngine`, also absent, or its in-token variants, which start from a heavier CMTAT base. CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
+**`CMTAT-Factory` is the only companion project a Light deployment can definitely use:**
+
+* RuleEngine and every rule need `setRuleEngine`, which Light does not have.
+* SnapshotEngine needs either `setSnapshotEngine`, also absent, or its in-token variants, which start from a heavier CMTAT base.
+* CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
 
 ### 10.2 Stablecoin features the CMTA ecosystem does not provide
 
@@ -344,7 +364,14 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 
 CMTAT's own documentation recommends the **Light** variant for stablecoins. That recommendation holds only for a specific shape of stablecoin.
 
-**Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model exactly and improves on it: five independently grantable roles instead of one `owner`, batch operations, pre-trade `canTransfer` views, permanent deactivation, mutable `name`/`symbol`, and, through CMTAT-Factory, beacon upgrades and CREATE2 addresses that no stablecoin in `vendor-stablecoins/` has. At 11.3 KiB it is also the smallest deployment in the set.
+**Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model and adds:
+
+* five independently grantable roles instead of one `owner`;
+* batch operations and pre-trade `canTransfer` views;
+* permanent deactivation and mutable `name` / `symbol`;
+* through CMTAT-Factory, beacon upgrades and CREATE2 addresses that no stablecoin in `vendor-stablecoins/` has.
+
+At 11.3 KiB it is also the smallest deployment in the set.
 
 **Where Light falls short.** Four things the stablecoins here provide and Light does not:
 
