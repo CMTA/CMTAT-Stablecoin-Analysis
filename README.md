@@ -2,7 +2,7 @@
 
 Feature-by-feature comparison between **CMTAT** (the CMTA Token standard, Solidity/EVM implementation) and six production stablecoins whose source is vendored in this repository.
 
-The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the CMTA companion projects (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory) provide it?**
+The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?**
 
 ---
 
@@ -31,7 +31,7 @@ Every claim below was read from the code pinned in this repository, not from mar
 
 ### 1.1 CMTAT and its companion projects
 
-Everything under [`cmtat/`](./cmtat/): the token standard plus the seven projects that extend it.
+Everything under [`cmtat/`](./cmtat/): the token standard, the seven companion projects that extend it, and `CMTAT-Confidential`, which is an alternative token build rather than a companion.
 
 | Project | Role | Tag | Commit | Date | Solidity |
 | --- | --- | --- | --- | --- | --- |
@@ -76,7 +76,7 @@ CMTAT is not one contract, so each table splits it into **three** columns. That 
 
 | Column | Meaning |
 | --- | --- |
-| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — the variant CMTAT's own documentation recommends for stablecoins. 11.3 KiB, built on `0_CMTATBaseCore`. |
+| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — the variant CMTAT's own documentation recommends for stablecoins. built on `0_CMTATBaseCore`; 11.3 KiB deployed, per CMTAT's own documentation (sizes were not recompiled here). |
 | **CMTAT** | The token contract in any variant **other than** Light: `Standard`, `Permit`, or a dedicated one (`Allowlist`, `Snapshot`, `ERC1363`, `ERC7551`, `HolderList`, `Debt`, `UUPS`). The applicable variant is named in the cell. |
 | **Companion** | A separate CMTA project that extends the token: **RuleEngine**, **Rules**, **SnapshotEngine**, **CMTAT-Factory**, **CMTAT-LayerZero**, **CMTAT-ACE** or **CMTAT-CCIP**. The specific contract or policy is named. |
 
@@ -176,7 +176,7 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 
 **Reading.** Light gates minting on `MINTER_ROLE` and nothing else: no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
 
-The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls has to move to Standard or Permit and pay ~11 KiB of extra bytecode plus two external contracts.
+The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls has to move to Standard or Permit and pay roughly 11 KiB of extra bytecode plus two external contracts.
 
 Paxos's time-windowed rate limit does have an equivalent, but only through a third architecture: **CMTAT-ACE**'s `VolumeRatePolicy` caps how much an account can move within a rolling window, and attaching it to the `mint` selector reproduces `SupplyControl` + `RateLimit.sol`. That means a different token build (`ComplianceTokenCMTAT*`), not a contract bolted onto an existing deployment.
 
@@ -246,7 +246,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 Two concrete misses, both variant-independent:
 
 * **No UUPS Light variant** exists, and `CMTATUpgradeableUUPS` is built on the Standard branch, so a Light issuer wanting UUPS must write their own.
-* **Nothing in the entire stack can recover a foreign ERC-20 sent to the token contract.** Circle, Paxos and Wyoming all ship it; CMTAT, RuleEngine, Rules, SnapshotEngine, CMTAT-Factory and CMTAT-LayerZero all lack it.
+* **Nothing in the entire stack can recover a foreign ERC-20 sent to the token contract.** Circle, Paxos and Wyoming all ship it; CMTAT and all seven companion projects lack it.
 
 ## 9. Yield, cross-chain and extras
 
@@ -270,7 +270,7 @@ Two concrete misses, both variant-independent:
 | Transfer fee | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (set to 0) |
 | Redemption modelled on-chain | ⚠️ burn | ⚠️ burn | ⚠️ `RuleConditionalTransferLight` can gate it | ⚠️ burn | ⚠️ burn | ⚠️ signature-gated burn | ⚠️ burn | ✅ redemption addresses | ⚠️ `redeem` |
 
-**Reading.** Light is deliberately stripped of all of this, and for a plain fiat stablecoin that is the right call: none of the six stablecoins has documents, snapshots or holder lists either. What Light also gives up, less obviously, is **cross-chain**: ERC-7802 and the CCIP module live at level 5, so a Light token has no standard bridge entry points. Given that four of the six stablecoins here are multi-chain, that is the most likely reason a stablecoin issuer would have to leave Light for reasons unrelated to compliance.
+**Reading.** Light is deliberately stripped of all of this, and for a plain fiat stablecoin that is the right call: none of the six stablecoins has documents, snapshots or holder lists either. What Light also gives up, less obviously, is **cross-chain**: ERC-7802 and the CCIP module live at level 5, so a Light token has no standard bridge entry points. Given that five of the six stablecoins here are multi-chain (CoinVertible is the exception), that is the most likely reason a stablecoin issuer would have to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
@@ -288,7 +288,7 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 | Minter management in a separate contract | USDC (`MasterMinter`), Paxos (`SupplyControl`) | ✅ **RuleEngine** + `RuleMintAllowance` is the architectural equivalent | ❌ needs RuleEngine |
 | Per-transfer operator approval | CoinVertible (registrar validation) | ✅ **Rules** `RuleConditionalTransferLight` | ❌ needs RuleEngine |
 | Max supply / per-holder balance caps | none | ✅ **Rules** `RuleMaxTotalSupply`, `RuleMaxBalance` | ❌ needs RuleEngine |
-| Proof-of-reserve-gated minting | none | ✅ **Rules** `RuleChainlinkPoR` | ❌ needs RuleEngine |
+| Proof-of-reserve-gated minting | none | ✅ **Rules** `RuleChainlinkPoR`, or **CMTAT-ACE** `SecureMintPolicy` | ❌ needs RuleEngine or an ACE build |
 | Deterministic cross-chain addresses | none — all solve it out-of-band | ✅ **CMTAT-Factory** (CREATE2) | 🏭 **yes** |
 | Fleet-wide upgrade of many tokens | none — all upgrade per token | ✅ **CMTAT-Factory** beacon factories | 🏭 **yes** |
 | LayerZero OFT bridging | Wyoming | ✅ **CMTAT-LayerZero** adapters | ⚠️ ERC-7802 adapter needs level 5; ERC-3643 adapter untested on Light |
@@ -336,7 +336,7 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 
 **Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model exactly and improves on it: five independently grantable roles instead of one `owner`, batch operations, pre-trade `canTransfer` views, permanent deactivation, mutable `name`/`symbol`, and, through CMTAT-Factory, beacon upgrades and CREATE2 addresses that no stablecoin in `vendor/` has. At 11.3 KiB it is also the smallest deployment in the set.
 
-**Where Light falls short.** Against the other five stablecoins it is the thinnest token in this comparison on three axes:
+**Where Light falls short.** Four things the stablecoins here provide and Light does not:
 
 | What Light lacks | Who has it | Cost of fixing it |
 | --- | --- | --- |
@@ -345,7 +345,7 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 | Cross-chain entry points | Circle (CCTP), Wyoming (OFT), Paxos | move to any level-5+ variant for ERC-7802 / CCIP, then add a `CMTAT-LayerZero` adapter |
 | Forced *transfer* (it has forced *burn*) | Paxos, CoinVertible | move to any non-Light variant — and lose `forcedBurn` |
 
-**The competitive configuration is Standard or Permit + RuleEngine + Rules**, which reaches parity with USDC and Monerium and exceeds both on compliance composability, at ~22–23 KiB plus two external contracts, roughly double Light's footprint.
+**The competitive configuration is Standard or Permit + RuleEngine + Rules**, which matches USDC and Monerium feature for feature and adds composable rule stacking neither has, at a reported 22–23 KiB plus two external contracts, roughly double Light's footprint.
 
 **Three gaps survive every configuration** and must be built by the issuer: **ERC-3009**, **foreign-token rescue**, and **yield accrual**. Only ERC-3009 has a published plan, as a dedicated deployment version in [CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346). Time-windowed rate limiting is no longer one of them, since `CMTAT-ACE`'s `VolumeRatePolicy` covers it, but only by deploying a different token build.
 
