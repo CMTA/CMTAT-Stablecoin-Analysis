@@ -115,6 +115,8 @@ Stablecoin column abbreviations: **USDC** = Circle, **PAX** = Paxos, **MON** = M
 
 CMTAT is deliberately split across several repositories. Knowing what each one owns is the key to reading the tables.
 
+It is also split *within* the token. The 25 modules under `contracts/modules/wrapper/` (core, extensions, options, controllers, security) sit behind a layered set of base contracts, and each of the 21 shipped deployment variants is a thin assembly of them — `CMTATStandardStandalone`, for instance, is 66 lines that inherit a base and add a rule-engine hook and a forwarder. An issuer whose requirements match no shipped variant composes their own from the same parts rather than forking the token, and the same seam lets an integrator graft on features CMTAT does not have. Two of the companion projects are exactly that: `SnapshotEngine`'s in-token variants and all of `CMTAT-ACE`'s builds are third-party assemblies of CMTAT base contracts. None of the six stablecoins is factored this way — each is a fixed inheritance chain, and adding a feature means editing the token.
+
 | Project | What it owns | Bound to the token by | Light? |
 | --- | --- | --- | --- |
 | **CMTAT** | ERC-20, mint/burn, pause, address freeze, forced burn/transfer, RBAC, deactivation, documents, cross-chain entry points | — (it *is* the token) | — |
@@ -372,6 +374,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 * **Bridge-agnostic cross-chain entry points** — ERC-7802 is a standard interface any bridge can drive; every stablecoin here is wired to one specific bridge (CCTP for Circle, LayerZero for Wyoming). CMTAT has working tooling for both LayerZero and CCIP.
 * **Compliance as runtime configuration** (CMTAT-ACE) — policies are attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook; no stablecoin here can reorder a policy chain without an upgrade.
 * **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor-stablecoins/`.
+* **A token that can be recomposed rather than forked.** 25 modules and a layered base chain mean an issuer can assemble a variant that matches their requirements, and an integrator can add features CMTAT never shipped — as `SnapshotEngine` and `CMTAT-ACE` both do. The stablecoins here are fixed inheritance chains; Paxos comes closest with its diamond facets, but those are Paxos's own facets, not a kit anyone else builds with.
 * **Mutable `name` / `symbol`** post-deployment.
 
 ### 10.4 Practical conclusion for a stablecoin issuer
