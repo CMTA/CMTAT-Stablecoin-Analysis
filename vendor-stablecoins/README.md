@@ -14,7 +14,7 @@ Two kinds of directories live here:
 | [`monerium-smart-contracts`](#monerium--monerium-smart-contracts) | Monerium — EURe, GBPe, USDe, ISKe | submodule | `514bee7` (v2.0.0+24, 2025-08-21) |
 | [`frontier-stable-token`](#wyoming--frontier-stable-token) | Wyoming Stable Token Commission — FRNT, wFRNT | submodule | `f8aa140` (untagged, 2026-04-30) |
 | [`cv_eth_0xf4ccc80c…`](#coinvertible--cv_eth_0xf4ccc80c) | Société Générale FORGE — CoinVertible (EURCV, USDCV) | Etherscan dump | impl. `0xF4ccC80C…` |
-| [`eurr_eth_0xb6de5eab…`](#bridge--eurr_eth_0xb6de5eab) | Bridge Building (Stripe) — EURR, the Revolut Euro | Etherscan dump | impl. `0xb6De5eAb…` |
+| [`eurr/`](#bridge--eurr) | Bridge Building (Stripe) — EURR, the Revolut Euro | Etherscan dump | token `0xb6De5eAb…`, registry `0x73531fc8…` |
 | [`usdt_eth_0xdac17f95…`](#tether--usdt_eth_0xdac17f95) | Tether — USDT | Etherscan dump | `0xdac17f95…` |
 
 Etherscan-dump directories are named `<token>_eth_<address>_code`, where the address is the **implementation** contract the verified source was downloaded from — not necessarily the address users interact with. Both were downloaded on 2026-08-26 through Etherscan with the [MetaSuites](https://chromewebstore.google.com/detail/metasuites-builders-swiss/) extension (BlockSec), which named them after the wrong token; they were renamed to match their contents.
@@ -147,7 +147,7 @@ Solidity 0.8.22, UUPS upgradeable, OpenZeppelin 4.x upgradeable vendored alongsi
 
 Notable design points: a transfer to a registered *redemption address* is silently rerouted to the `registrar` and emits `RedemptionStarted`; upgrades are two-step (`authorizeImplementation` by the registrar/operations, then `upgradeTo` by the `technical` operator); `pause` stops everything except registrar `mint`/`burn`.
 
-## Bridge — `eurr_eth_0xb6de5eab…`
+## Bridge — `eurr/`
 
 **EURR**, the euro stablecoin Revolut distributes in the EEA, issued by **Bridge Building, a Stripe company**. Solidity ^0.8.24, OpenZeppelin 5.3.0, UUPS.
 
@@ -157,16 +157,20 @@ Notable design points: a transfer to a registered *redemption address* is silent
 
 | Path | Role |
 | --- | --- |
+| `eurr_eth_0xb6de5eab…_code/` | The token; paths below are relative to it |
 | `src/v3/StablecoinTemplateV3.sol` | The token: `wrap` / `unwrap` over a reserve-ledger ERC-20, legacy `mint` / `burn`, `burnFromBlockedAddress`, `completeMigrationToWrapped` |
 | `src/v3/StablecoinTemplateV3Base.sol` | Roles, pause, the `IAuthRegistry` lookups (`isBlocked`, `isMintRecipient`), `maxSupply`, policy-id setters, `_update` guard, `_authorizeUpgrade` |
 | `src/v3/StablecoinTemplateV3Storage.sol` | EIP-7201 namespaced storage plus a transient-storage slot for the temporary-unblock flag |
 | `src/v3/StablecoinTemplateV3ErrorsAndEvents.sol` | Custom errors and events |
 | `src/utils/IERC20Mintable.sol` | Interface of the reserve-ledger token the wrapper holds |
 | `dependencies/auth-registry-1/src/IAuthRegistry.sol` | `isAuthorized(policyId, user)` — the whole external compliance surface |
+| `AutRegistry_eth_0x73531fc8…_code/…/AuthRegistry.sol` | The registry implementation: typed policies, policy chaining, per-policy admins |
 | `dependencies/@openzeppelin-*-5.3.0/**` | Vendored OZ dependencies as flattened by Etherscan |
 | `abi.json` | ABI of the implementation |
 
 Notable design points. The contract is named a **template**, and behaves as one: the same code is parameterised by a reserve-ledger address, an auth registry and a decimals value rather than being written per currency. It is a **wrapper**, not a plain mint/burn token — `wrap` pulls reserve-ledger tokens from the caller and mints 1:1, `unwrap` burns and returns them, so the backing is held in the contract rather than attested off-chain. Direct `mint` / `burn` still exist but are disabled for good once an admin calls `completeMigrationToWrapped()`, which asserts that the reserve balance already equals `totalSupply()`. Compliance is entirely external: every check is `AUTH_REGISTRY.isAuthorized(policyId, account)`, with separate policy ids for transfers and for mint recipients, both swappable by the admin — the storage layout still holds `__DEPRECATED_blockedList` and `__DEPRECATED_mintRecipientList` from before that move. `maxSupply` caps issuance in-token. `PAUSER_ROLE` and `UNPAUSER_ROLE` are separate, and `_revokeRole` refuses to remove the last admin.
+
+The registry is captured alongside the token, so the policies are readable rather than inferred. Each policy carries a `PolicyType` of `WHITELIST` or `BLACKLIST`, and `isAuthorized` returns `policyType == WHITELIST` for a listed account and `policyType == BLACKLIST` for an unlisted one — so the same token code screens as an allowlist or a blocklist purely according to the policy id its admin points at. Policies may name a same-typed `parentPolicyId`, and a miss in the child falls through to the parent recursively, which allows hierarchies of lists. Ids `0` and `1` are reserved as always-reject and always-allow. The registry itself has no owner or roles: `createPolicy` is open to anyone, and each policy is administered by the address named at creation.
 
 ## Tether — `usdt_eth_0xdac17f95…`
 

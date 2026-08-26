@@ -29,7 +29,7 @@ Nothing here is compiled, deployed or tested — the deliverables are Markdown d
 - **The three CMTAT columns.** Comparison tables split CMTAT into `Light` / `CMTAT` / `Companion` because the features are not co-located: `Light` is the stablecoin-oriented variant (`0_CMTATBaseCore`, 11.3 KiB); `CMTAT` is any heavier variant; `Companion` is a separate CMTA project extending the token (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory, CMTAT-LayerZero, CMTAT-ACE, CMTAT-CCIP).
 - **Light cannot reach most companions.** `ValidationModuleRuleEngine` enters the inheritance chain at `3_CMTATBaseRuleEngine`; Light stops at level 0, so it has no `setRuleEngine` and therefore no access to RuleEngine, any of the 15 rules, or SnapshotEngine. CMTAT-Factory is the only companion Light can definitely use.
 - **`forcedBurn` and `forcedTransfer` never coexist.** `forcedBurn` is defined in `0_CMTATBaseCore` (Light only); `forcedTransfer` and `freezePartialTokens` come from `ERC20EnforcementModule` in `0_CMTATBaseCommon` (every variant *except* Light).
-- **Etherscan dumps are named `<token>_eth_<address>_code`,** where the address is the *implementation* contract the source came from, not the proxy users interact with — `cv_eth_0xf4ccc80c…` is CoinVertible's implementation, whose proxy is `0x5422374B…`. The download tool named both directories after the wrong token and they were renamed by hand, so confirm content when re-downloading rather than trusting the generated name.
+- **Etherscan dumps are named `<token>_eth_<address>_code`,** except `eurr/`, which groups two such directories (the token and its `AuthRegistry`) under one folder — where the address is the *implementation* contract the source came from, not the proxy users interact with — `cv_eth_0xf4ccc80c…` is CoinVertible's implementation, whose proxy is `0x5422374B…`. The download tool named both directories after the wrong token and they were renamed by hand, so confirm content when re-downloading rather than trusting the generated name.
 
 ## Repository layout
 
@@ -44,6 +44,7 @@ vendor-stablecoins/
 ├── monerium-smart-contracts/ [submodule] Monerium — EURe/GBPe/USDe/ISKe (UUPS, IValidator hook, no pause)
 ├── frontier-stable-token/    [submodule] Wyoming — FRNT/wFRNT (Fireblocks ERC-20F, LayerZero OFT, Solana)
 ├── cv_eth_0xf4ccc80c…_code/    [Etherscan dump] SG-FORGE CoinVertible — EURCV, USDCV (SmartCoin.sol)
+├── eurr/                       [Etherscan dumps] Bridge/Stripe EURR — the token AND its AuthRegistry
 └── usdt_eth_0xdac17f95…_code/  [Etherscan dump] Tether USDT (TetherToken.sol, Solidity 0.4.17)
 vendor-chainlink/
 └── chainlink-ace/            [submodule] Chainlink ACE PolicyEngine + policy library (v1.2.0+1) — the policies CMTAT-ACE attaches

@@ -65,7 +65,7 @@ Every ACE policy named in this document (`VolumeRatePolicy`, `SecureMintPolicy`,
 
 ### 1.3 Stablecoins analysed
 
-Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and three verified-source dumps taken from Etherscan.
+Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and three verified-source dumps taken from Etherscan. The EURR dump is the only one that captures two contracts: the token and the `AuthRegistry` it delegates compliance to.
 
 | Issuer | Token(s) | Kind | Tag | Commit / address | Date | Solidity |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -74,7 +74,7 @@ Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream r
 | Monerium | EURe, GBPe, USDe, ISKe | submodule | `v2.0.0`+24 | `514bee7` | 2025-08-21 | 0.8.x |
 | Wyoming | FRNT, wFRNT | submodule | *(untagged)* | `f8aa140` | 2026-04-30 | 0.8.22 |
 | SG-FORGE | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
-| Bridge (Stripe) | EURR — [Revolut Euro](https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/) | Etherscan dump | — | impl. `0xb6De5eAb…` | dumped 2026-08-26 | ^0.8.24 |
+| Bridge (Stripe) | EURR — [Revolut Euro](https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/) | Etherscan dump | — | token impl. `0xb6De5eAb…` + registry `0x73531fc8…` | dumped 2026-08-26 | ^0.8.24 |
 | Tether | USDT | Etherscan dump | — | `0xdac17f95…` | dumped 2026-08-26 | 0.4.17 |
 
 The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md).
@@ -218,7 +218,7 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 | Partial balance freeze | ❌ | ✅ `freezePartialTokens` | ⚠️ **Rules** `RuleERC2980` (whitelist + frozenlist) | ❌ | ⚠️ whole address | ❌ | ❌ | ⚠️ whole address | ⚠️ whole address | ❌ |
 | **External / shared blacklist** | ❌ | ✅ via engine | ✅ **RuleEngine** + **Rules** `RuleBlacklist` — one engine, several tokens | ❌ | ❌ | ✅ shared validator | ✅ shared registry | ❌ | ⚠️ getters for successors | ✅ `IAuthRegistry`, policy-keyed |
 | Allowlist / whitelist | ❌ | ✅ `Allowlist` variant (`ALLOWLIST_ROLE`) | ✅ **Rules** `RuleWhitelist`, `RuleReceiverWhitelist`, `RuleSpenderWhitelist`, `RuleWhitelistWrapper` | ❌ | ❌ | ⚠️ custom validator | ⚠️ pluggable registry | ❌ | ❌ | ✅ mint-recipient policy |
-| **Sanctions-oracle screening** | ❌ | ❌ in-token | ✅ **Rules** `RuleSanctionsList` (Chainalysis), reusable as an ACE policy via `TransferValidationPolicy` | ❌ | ❌ | ❌ | ✅ via registry | ❌ | ❌ | ⚠️ registry-dependent, not vendored |
+| **Sanctions-oracle screening** | ❌ | ❌ in-token | ✅ **Rules** `RuleSanctionsList` (Chainalysis), reusable as an ACE policy via `TransferValidationPolicy` | ❌ | ❌ | ❌ | ✅ via registry | ❌ | ❌ | ⚠️ policy-dependent; the registry holds address lists, not an oracle |
 | Pluggable transfer-rule engine | ❌ **no `setRuleEngine`** | ✅ all except `Allowlist` | ✅ **RuleEngine** is that engine | ❌ | ❌ | ✅ `IValidator` | ✅ `IAccessRegistry` | ❌ | ❌ | ✅ `IAuthRegistry` |
 | Per-holder balance cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxBalance` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Per-holder volume cap per period | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `VolumeRatePolicy` (fixed tumbling period) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -238,7 +238,18 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 * **Lite** — swaps the RuleEngine for the PolicyEngine on transfer validation, and keeps CMTAT's roles.
 * **Standard** — policy-authoritative: ACE gates mint, burn, transfer, enforcement and admin, and the token drops `AccessControlUpgradeable` for `OwnableUpgradeable`. That is a real trade-off, giving up the granular RBAC that is otherwise one of CMTAT's advantages over USDC and USDT.
 
-**EURR externalises compliance further than any other token here.** Both of its checks resolve through one external contract: `isBlocked(a)` is `!AUTH_REGISTRY.isAuthorized(transferPolicyId, a)` and `isMintRecipient(a)` is `isAuthorized(mintRecipientPolicyId, a)`. The registry is addressed by **policy id**, and both ids are settable by the admin, so a single registry serves several policies and the token chooses which one governs transfers and which governs minting — closer to CMTAT-ACE's per-selector model than to Monerium's single validator. Its storage still carries `__DEPRECATED_blockedList` and `__DEPRECATED_mintRecipientList`, so V3 moved these lists out of the token. Two caveats: the registry itself is not in this dump, only `IAuthRegistry`, so whether a policy behaves as an allowlist or a blocklist depends on configuration this analysis cannot see; and `burnFromBlockedAddress` briefly flips a transient-storage unblock flag so `_burn` can pass its own transfer guard.
+**EURR externalises compliance further than any other token here.** Both of its checks resolve through one external contract: `isBlocked(a)` is `!AUTH_REGISTRY.isAuthorized(transferPolicyId, a)` and `isMintRecipient(a)` is `isAuthorized(mintRecipientPolicyId, a)`. The registry is addressed by **policy id**, and both ids are settable by the token admin, so one registry serves many policies and the token chooses which governs transfers and which governs minting — closer to CMTAT-ACE's per-selector model than to Monerium's single validator. Its storage still carries `__DEPRECATED_blockedList` and `__DEPRECATED_mintRecipientList`, so V3 moved these lists out of the token.
+
+Reading [`AuthRegistry`](./vendor-stablecoins/eurr/) itself settles what the policies mean:
+
+* **A policy is typed `WHITELIST` or `BLACKLIST`, so EURR is whichever its configured policy says.** `isAuthorized` returns `policyType == WHITELIST` for a listed account and `policyType == BLACKLIST` for an unlisted one — allow-by-default under a blacklist, deny-by-default under a whitelist. The same token code is an allowlist or a blocklist depending on a policy id its admin can change.
+* **Policies chain.** A policy may name a `parentPolicyId` of the same type; an account not found in the child is looked up in the parent, recursively. That composes hierarchies — a base list plus per-product overrides — which none of the other externalised designs here can express.
+* **Ids 0 and 1 are reserved** as always-reject and always-allow, so an admin can disable or bypass screening by pointing the token at a constant.
+* **The registry has no owner or roles of its own.** `createPolicy` is unpermissioned, and each policy is administered by the address named at creation (transferable in one step via `setPolicyAdmin`). Trust flows through the policy id the token admin selects, not through the registry contract.
+
+One structural note, since `isAuthorized` recurses: `_validateParentPolicy` blocks self-reference and type mismatch, but `modifyParentPolicy` can point two policies at each other after the fact. A cycle would make `isAuthorized` recurse until it runs out of gas, and every EURR transfer reverts with it. Reaching that state needs the cooperating policy admins to do it, so it is a design observation rather than an exposure.
+
+Also worth knowing: `burnFromBlockedAddress` briefly flips a transient-storage unblock flag so `_burn` can pass the contract's own transfer guard.
 
 **Light gets `forcedBurn` but not `forcedTransfer`; every other variant gets the reverse.** Paxos and CoinVertible can freeze then wipe; USDT can destroy. No single CMTAT deployment can both burn from a frozen address and move its tokens elsewhere.
 
