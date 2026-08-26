@@ -76,21 +76,21 @@ CMTAT is not one contract, so each table splits it into **three** columns. That 
 
 | Column | Meaning |
 | --- | --- |
-| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — the variant CMTAT's own documentation recommends for stablecoins. built on `0_CMTATBaseCore`; 11.3 KiB deployed, per CMTAT's own documentation (sizes were not recompiled here). |
+| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — the variant CMTAT's own documentation recommends for stablecoins. the smallest CMTAT build: 11.3 KiB deployed, per CMTAT's own documentation (sizes were not recompiled here). |
 | **CMTAT** | The token contract in any variant **other than** Light: `Standard`, `Permit`, or a dedicated one (`Allowlist`, `Snapshot`, `ERC1363`, `ERC7551`, `HolderList`, `Debt`, `UUPS`). The applicable variant is named in the cell. |
 | **Companion** | A separate CMTA project that extends the token: **RuleEngine**, **Rules**, **SnapshotEngine**, **CMTAT-Factory**, **CMTAT-LayerZero**, **CMTAT-ACE** or **CMTAT-CCIP**. The specific contract or policy is named. |
 
 > ### The Light variant cannot reach the companion contracts
 >
-> Light stops at [`0_CMTATBaseCore`](./cmtat/CMTAT/contracts/modules/0_CMTATBaseCore.sol); every hook the companions need enters higher up the chain. **CMTAT-Factory is the only one Light can definitely use.**
+> Light is the smallest CMTAT build, and the setters the companions plug into are only present in the heavier ones. **CMTAT-Factory is the only companion Light can definitely use.** (Evidence, for readers who want it: Light is built on [`0_CMTATBaseCore`](./cmtat/CMTAT/contracts/modules/0_CMTATBaseCore.sol), every other variant on a larger base.)
 >
 > | Companion | From Light? | Why |
 > | --- | --- | --- |
-> | RuleEngine + all 15 `Rules` | ❌ | `setRuleEngine` enters at [`3_CMTATBaseRuleEngine`](./cmtat/CMTAT/contracts/modules/3_CMTATBaseRuleEngine.sol); binding a rule directly needs that same missing setter |
-> | SnapshotEngine | ❌ | no `setSnapshotEngine`, and its in-token variants derive from `CMTATInternalSnapshotBase`, which imports `CMTATBaseRuleEngine` |
-> | CMTAT-ACE | ❌ | the `ComplianceTokenCMTAT*` builds derive from `CMTATBaseCommon` |
-> | CMTAT-CCIP | ❌ | needs the ERC-7802 / `CCIPModule` entry points |
-> | CMTAT-LayerZero | ⚠️ | its ERC-7802 adapter needs level 5; the ERC-3643 adapter targets the `mint` / `burn` pair Light has, but no test in that repo exercises the combination |
+> | RuleEngine + all 15 `Rules` | ❌ | Light has no `setRuleEngine`; binding a rule straight to the token needs that same setter |
+> | SnapshotEngine | ❌ | Light has no `setSnapshotEngine`, and the engine's in-token variants are built on a heavier CMTAT base |
+> | CMTAT-ACE | ❌ | it is a separate token build, and starts from a heavier CMTAT base |
+> | CMTAT-CCIP | ❌ | needs the ERC-7802 cross-chain entry points, which Light does not implement |
+> | CMTAT-LayerZero | ⚠️ | its recommended adapter needs ERC-7802, which Light lacks; the fallback adapter needs only `mint` / `burn`, which Light has, but that pairing is untested |
 > | CMTAT-Factory | 🏭 **yes** | `CMTAT_LIGHT_TP_FACTORY`, `CMTAT_LIGHT_BEACON_FACTORY` (no Light UUPS factory) |
 >
 > Read the Companion column as: *"available to CMTAT, but only if you move off Light."*
@@ -108,15 +108,15 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 | **CMTAT** | ERC-20, mint/burn, pause, address freeze, forced burn/transfer, RBAC, deactivation, documents, cross-chain entry points | — (it *is* the token) | — |
 | **RuleEngine** | The controller: holds an ordered list of rules, is called on every transfer/mint/burn, returns the first non-zero ERC-1404 code or reverts | `token.setRuleEngine(engine)` (`DEFAULT_ADMIN_ROLE`) | ❌ no setter |
 | **Rules** | The 15 pluggable rules: whitelists, blacklist, sanctions oracle, supply caps, balance caps, proof of reserve, mint allowance, conditional transfer, identity registry | `engine.setRules([...])`, or a single rule bound directly with `setRuleEngine(rule)` | ❌ needs the setter |
-| **SnapshotEngine** | Scheduled on-chain balance snapshots for dividend/reward distribution; external engine **or** compiled into the token | `token.setSnapshotEngine(engine)`, or the `CMTAT*InternalSnapshot` variants | ❌ both paths need level 3 |
+| **SnapshotEngine** | Scheduled on-chain balance snapshots for dividend/reward distribution; external engine **or** compiled into the token | `token.setSnapshotEngine(engine)`, or the `CMTAT*InternalSnapshot` variants | ❌ neither path exists in Light |
 | **CMTAT-Factory** | Deterministic (CREATE2) deployment behind Transparent, UUPS or Beacon proxies | deployment-time | ✅ `CMTAT_LIGHT_*_FACTORY` |
 | **CMTAT-LayerZero** | LayerZero V2 OFT adapters (mint/burn, not lock/unlock), each with its own owner-gated pause | grant the adapter mint/burn rights on the token | ⚠️ ERC-7802 adapter no; ERC-3643 adapter untested |
-| **CMTAT-ACE** | Alternative token builds (`ComplianceTokenCMTAT*`) that route protected calls through Chainlink's ACE `PolicyEngine`; ships extractors and a `TransferValidationPolicy` that reuses CMTAT `IRule` rules | a different token deployment, not a bolt-on | ❌ built on `CMTATBaseCommon`, not Light's `CMTATBaseCore` |
+| **CMTAT-ACE** | Alternative token builds (`ComplianceTokenCMTAT*`) that route protected calls through Chainlink's ACE `PolicyEngine`; ships extractors and a `TransferValidationPolicy` that reuses CMTAT `IRule` rules | a different token deployment, not a bolt-on | ❌ starts from a heavier CMTAT base than Light |
 | **CMTAT-CCIP** | Foundry scripts to deploy CMTAT behind Chainlink CCIP token pools (BurnMint or LockRelease) and wire lanes, rate limiters and allowlists | CCT admin role + pool registration | ❌ needs ERC-7802 / `CCIPModule` |
 
 ### 3.1 What Light actually contains
 
-`0_CMTATBaseCore` bundles the whole Light feature set in one level-0 base:
+A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
 
 | Module | Provides |
 | --- | --- |
@@ -131,7 +131,7 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 
 **Two structural quirks that matter for the tables below:**
 
-* `forcedBurn` exists **only** in Light. `forcedTransfer` and `freezePartialTokens` come from `ERC20EnforcementModule`, which sits in `0_CMTATBaseCommon`, the base every variant *except* Light inherits. **No variant has both**, so an issuer must decide at deployment whether seizure means *burn* (Light) or *move* (everything else).
+* `forcedBurn` exists **only** in Light. `forcedTransfer` and `freezePartialTokens` come from `ERC20EnforcementModule`, which every variant *except* Light inherits. **No variant has both**, so an issuer must decide at deployment whether seizure means *burn* (Light) or *move* (everything else).
 * `Permit` and `Standard` are mutually exclusive on ERC-2612 vs ERC-2771; the contract-size limit does not allow both. Light has neither.
 
 ---
@@ -270,7 +270,7 @@ Two concrete misses, both variant-independent:
 | Transfer fee | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (set to 0) |
 | Redemption modelled on-chain | ⚠️ burn | ⚠️ burn | ⚠️ `RuleConditionalTransferLight` can gate it | ⚠️ burn | ⚠️ burn | ⚠️ signature-gated burn | ⚠️ burn | ✅ redemption addresses | ⚠️ `redeem` |
 
-**Reading.** Light is deliberately stripped of all of this, and for a plain fiat stablecoin that is the right call: none of the six stablecoins has documents, snapshots or holder lists either. What Light also gives up, less obviously, is **cross-chain**: ERC-7802 and the CCIP module live at level 5, so a Light token has no standard bridge entry points. Given that five of the six stablecoins here are multi-chain (CoinVertible is the exception), that is the most likely reason a stablecoin issuer would have to leave Light for reasons unrelated to compliance.
+**Reading.** Light is deliberately stripped of all of this, and for a plain fiat stablecoin that is the right call: none of the six stablecoins has documents, snapshots or holder lists either. What Light also gives up, less obviously, is **cross-chain**: ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Given that five of the six stablecoins here are multi-chain (CoinVertible is the exception), that is the most likely reason a stablecoin issuer would have to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
@@ -291,11 +291,11 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 | Proof-of-reserve-gated minting | none | ✅ **Rules** `RuleChainlinkPoR`, or **CMTAT-ACE** `SecureMintPolicy` | ❌ needs RuleEngine or an ACE build |
 | Deterministic cross-chain addresses | none — all solve it out-of-band | ✅ **CMTAT-Factory** (CREATE2) | 🏭 **yes** |
 | Fleet-wide upgrade of many tokens | none — all upgrade per token | ✅ **CMTAT-Factory** beacon factories | 🏭 **yes** |
-| LayerZero OFT bridging | Wyoming | ✅ **CMTAT-LayerZero** adapters | ⚠️ ERC-7802 adapter needs level 5; ERC-3643 adapter untested on Light |
+| LayerZero OFT bridging | Wyoming | ✅ **CMTAT-LayerZero** adapters | ⚠️ recommended adapter needs ERC-7802; the fallback is untested on Light |
 | Time-windowed rate limiting | Paxos `RateLimit.sol` | ✅ **CMTAT-ACE** `VolumeRatePolicy` | ❌ separate token build |
 | Compliance changed by configuration, not upgrade | Monerium, Wyoming (one hook each) | ✅ **CMTAT-ACE** policy attach/detach/reorder | ❌ separate token build |
 
-**`CMTAT-Factory` is the only companion project a Light deployment can definitely use.** RuleEngine and every rule need `setRuleEngine`, which Light does not have; SnapshotEngine needs either `setSnapshotEngine` (also absent) or its in-token variants, which are built on `CMTATBaseRuleEngine` rather than on Light's `CMTATBaseCore`. CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
+**`CMTAT-Factory` is the only companion project a Light deployment can definitely use.** RuleEngine and every rule need `setRuleEngine`, which Light does not have; SnapshotEngine needs either `setSnapshotEngine`, also absent, or its in-token variants, which start from a heavier CMTAT base. CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
 
 ### 10.2 Stablecoin features the CMTA ecosystem does not provide
 
@@ -342,7 +342,7 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 | --- | --- | --- |
 | Any bound on minter authority | USDC, Paxos, Monerium | move to Standard/Permit + RuleEngine + `RuleMintAllowance` |
 | `permit` (ERC-2612) | USDC, Paxos, Monerium, Wyoming | move to Permit — which forfeits ERC-2771 |
-| Cross-chain entry points | Circle (CCTP), Wyoming (OFT), Paxos | move to any level-5+ variant for ERC-7802 / CCIP, then add a `CMTAT-LayerZero` adapter |
+| Cross-chain entry points | Circle (CCTP), Wyoming (OFT), Paxos | move to a variant that implements ERC-7802 / CCIP, then add a `CMTAT-LayerZero` adapter |
 | Forced *transfer* (it has forced *burn*) | Paxos, CoinVertible | move to any non-Light variant — and lose `forcedBurn` |
 
 **The competitive configuration is Standard or Permit + RuleEngine + Rules**, which matches USDC and Monerium feature for feature and adds composable rule stacking neither has, at a reported 22–23 KiB plus two external contracts, roughly double Light's footprint.
