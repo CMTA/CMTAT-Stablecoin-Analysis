@@ -40,3 +40,6 @@
 [submodule "vendor-chainlink/chainlink-ace"]
 	path = vendor-chainlink/chainlink-ace
 	url = https://github.com/smartcontractkit/chainlink-ace
+[submodule "cmtat/private-CMTAT-aztec"]
+	path = cmtat/private-CMTAT-aztec
+	url = https://github.com/CMTA/private-CMTAT-aztec

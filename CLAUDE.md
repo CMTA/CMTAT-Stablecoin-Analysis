@@ -54,6 +54,7 @@ cmtat/
 ├── CMTAT-Confidential/       [submodule] Zama FHE confidential variant (v1.0.0)
 ├── CMTAT-Factory/            [submodule] CREATE2 factories, Transparent / UUPS / Beacon (v0.5.0)
 ├── CMTAT-LayerZero/          [submodule] LayerZero V2 OFT adapters, ERC-7802 and ERC-3643 (v0.2.0+1)
+├── private-CMTAT-aztec/      [submodule] private CMTAT on Aztec, written in Noir — unaudited prototype
 ├── RuleEngine/               [submodule] external transfer-restriction controller (v3.0.0-rc6)
 ├── Rules/                    [submodule] the 15 pluggable rules used by RuleEngine (v0.6.0)
 └── SnapshotEngine/           [submodule] on-chain ERC-20 snapshots (v0.5.0)
