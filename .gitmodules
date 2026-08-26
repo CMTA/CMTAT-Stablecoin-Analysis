@@ -46,3 +46,6 @@
 [submodule "cmtat/CMTAT-Solana"]
 	path = cmtat/CMTAT-Solana
 	url = https://github.com/CMTA/CMTAT-Solana
+[submodule "cmtat/CMTAT-Tezos-FA2"]
+	path = cmtat/CMTAT-Tezos-FA2
+	url = https://github.com/CMTA/CMTAT-Tezos-FA2
