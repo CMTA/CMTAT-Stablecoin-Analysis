@@ -360,3 +360,9 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 * [`cmtat/Rules/README.md`](./cmtat/Rules/README.md) — the rule catalogue and restriction codes.
 * [`cmtat/RuleEngine/README.md`](./cmtat/RuleEngine/README.md) — engine architecture and token-binding model.
 * [`cmtat/CMTAT-LayerZero/README.md`](./cmtat/CMTAT-LayerZero/README.md) — OFT adapter selection and deployment guide.
+
+---
+
+## AI assistance
+
+Parts of this project were written with the help of AI coding assistant Claude Code (Anthropic).
