@@ -165,10 +165,15 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 | ERC-6357 `multicall` | ❌ | ✅ `Permit` | — | ❌ | ❌ | ❌ | ⚠️ OZ `Multicall` | ❌ | ❌ |
 | ERC-1363 `transferAndCall` | ❌ | ✅ `ERC1363` | — | ❌ | ❌ | ⚠️ ERC-677 via controller shim | ❌ | ❌ | ❌ |
 | ERC-7802 cross-chain mint/burn | ❌ | ✅ all except `Allowlist` | — | ❌ (CCTP) | ❌ | ❌ | ❌ (LayerZero OFT) | ❌ | ❌ |
-| ERC-3643 / ERC-7551 / ERC-7943 | ⚠️ ERC-7943 errors only | ✅ | ✅ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` fill the ERC-3643 slots | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-3643 (partial) | ❌ | ⚠️ token-side interfaces only, via `IERC3643Partial` — **no on-chain identity layer** | ⚠️ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` fill the identity slot of an ERC-3643 token, not of CMTAT | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-7551 / ERC-7943 | ⚠️ ERC-7943 errors only | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | ERC-7201 namespaced storage | ✅ | ✅ | ✅ RuleEngine, Rules, SnapshotEngine | ❌ | ⚠️ explicit `BaseStorageV3` | ✅ | ⚠️ OZ | ❌ `*DataLayout` | ❌ |
 
-**Reading.** CMTAT is the only project here implementing ERC-1404, ERC-3643, ERC-7551, ERC-7943 or ERC-7802. All of them sit above Light, which implements plain ERC-20 plus batch helpers. Every stablecoin except CoinVertible and USDT ships `permit`; Light does not.
+**Reading.**
+
+* **CMTAT is the only project here implementing ERC-1404, ERC-7551, ERC-7943 or ERC-7802**, and all of them sit above Light, which implements plain ERC-20 plus batch helpers.
+* **Its ERC-3643 support is partial by design.** The interface it implements is named [`IERC3643Partial`](./cmtat/CMTAT/contracts/interfaces/tokenization/IERC3643Partial.sol) and covers the token-side calls — pause, freeze, mint/burn, batch, compliance callbacks. CMTAT's own README describes it as ERC-3643 "without on-chain identity", and nothing in `cmtat/CMTAT/contracts/` references an identity registry or ONCHAINID. A deployment that must satisfy ERC-3643 in full needs an identity layer built alongside it; `Rules` ships one, but it binds to an ERC-3643 token's identity slot, not to CMTAT.
+* **Every stablecoin except CoinVertible and USDT ships `permit`**; Light does not.
 
 **ERC-3009 is absent from the entire stack**, Light and companion projects alike, and it is the one signature standard both Circle and Paxos ship. CMTA has it on the roadmap as a dedicated deployment version ([CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346)); the status below reflects the code pinned here, not the roadmap.
 
@@ -218,7 +223,7 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 | Externalised pause and RBAC | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `PausePolicy`, `RoleBasedAccessControlPolicy` (Standard variant) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Compliance change without redeploy | ❌ | ⚠️ swap the RuleEngine | ✅ **CMTAT-ACE** — attach / detach / reorder policies by governance | ❌ | ❌ | ⚠️ swap the validator | ⚠️ swap the registry | ❌ | ❌ |
 | **Per-transfer operator approval** | ❌ | ❌ in-token | ✅ **Rules** `RuleConditionalTransferLight` | ❌ | ❌ | ❌ | ❌ | ⚠️ redemption routing | ❌ |
-| Identity registry / KYC binding | ❌ | ✅ ERC-3643 slot | ✅ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` | ❌ | ❌ | ❌ | ⚠️ off-chain | ❌ | ❌ |
+| Identity registry / KYC binding | ❌ | ❌ no identity-registry slot on the token | ⚠️ **Rules** ships `IdentityRegistryWhitelist` and `RuleIdentityRegistry`, but they fill an **ERC-3643** token's identity slot; reaching CMTAT means screening through the RuleEngine instead | ❌ | ❌ | ❌ | ⚠️ off-chain | ❌ | ❌ |
 | Standardised enforcement events | ⚠️ `ForcedTransfer` event only | ✅ ERC-7551 / ERC-7943 | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 **Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. That is enough for a plain fiat stablecoin, and it is the case CMTA's documentation makes.
