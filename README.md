@@ -79,17 +79,17 @@ The Etherscan dumps capture a single **implementation** contract each, not a ful
 
 ## 2. How to read the tables
 
-CMTAT is not one contract, so each table splits it into **three** columns. That makes it visible at a glance whether a feature is reachable from the variant CMTA actually recommends for stablecoins, from a heavier variant, or only from a companion project.
+CMTAT is not one contract, so each table splits it into **three** columns. Light is kept separate because it is a deliberately reduced build, not a subset of the others: separating it shows at a glance which features an issuer gives up by choosing the minimal contract, and which need a companion project on top of a heavier one.
 
 | Column | Meaning |
 | --- | --- |
-| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — the variant CMTAT's own documentation recommends for stablecoins. the smallest CMTAT build: 11.3 KiB deployed, per CMTAT's own documentation (sizes were not recompiled here). |
+| **Light** | [`CMTATStandaloneLight` / `CMTATUpgradeableLight`](./cmtat/CMTAT/contracts/deployment/light/) — a deliberately minimal CMTAT for issuers who want fewer features and a smaller contract, and the variant CMTA recommends for stablecoins. 11.3 KiB deployed, roughly half the Standard variant, per CMTAT's own documentation (sizes were not recompiled here). |
 | **CMTAT** | The token contract in any variant **other than** Light: `Standard`, `Permit`, or a dedicated one (`Allowlist`, `Snapshot`, `ERC1363`, `ERC7551`, `HolderList`, `Debt`, `UUPS`). The applicable variant is named in the cell. |
 | **Companion** | A separate CMTA project that extends the token: **RuleEngine**, **Rules**, **SnapshotEngine**, **CMTAT-Factory**, **CMTAT-LayerZero**, **CMTAT-ACE** or **CMTAT-CCIP**. The specific contract or policy is named. |
 
-> ### The Light variant cannot reach the companion contracts
+> ### What minimalism costs: Light cannot reach the companion contracts
 >
-> Light is the smallest CMTAT build, and the setters the companions plug into are only present in the heavier ones. **CMTAT-Factory is the only companion Light can definitely use.** (Evidence, for readers who want it: Light is built on [`0_CMTATBaseCore`](./cmtat/CMTAT/contracts/modules/0_CMTATBaseCore.sol), every other variant on a larger base.)
+> Keeping Light small means leaving out the setters the companion projects plug into, so most of the Companion column is unavailable to it. **CMTAT-Factory is the only companion Light can definitely use.** (Evidence, for readers who want it: Light is built on [`0_CMTATBaseCore`](./cmtat/CMTAT/contracts/modules/0_CMTATBaseCore.sol), every other variant on a larger base.)
 >
 > | Companion | From Light? | Why |
 > | --- | --- | --- |
@@ -123,7 +123,9 @@ CMTAT is deliberately split across several repositories. Knowing what each one o
 
 ### 3.1 What Light actually contains
 
-A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
+Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules most stablecoins never use — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A ❌ in the Light column below is a design decision, not an oversight.
+
+A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 | Module | Provides |
 | --- | --- |
@@ -360,7 +362,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 
 ### 10.4 Practical conclusion for a stablecoin issuer
 
-CMTAT's own documentation recommends the **Light** variant for stablecoins. That recommendation holds only for a specific shape of stablecoin.
+CMTAT offers **Light** to issuers who want a minimal contract rather than the full feature set, and recommends it for stablecoins. The question is therefore not whether Light is missing things — it is missing them on purpose — but whether the things it leaves out are ones a given stablecoin needs.
 
 **Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model and adds:
 
