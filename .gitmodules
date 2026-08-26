@@ -1,0 +1,39 @@
+[submodule "vendor/stablecoin-evm"]
+	path = vendor/stablecoin-evm
+	url = https://github.com/circlefin/stablecoin-evm.git
+[submodule "vendor/monerium-smart-contracts"]
+	path = vendor/monerium-smart-contracts
+	url = https://github.com/monerium/smart-contracts/
+[submodule "vendor/paxos-token-contracts"]
+	path = vendor/paxos-token-contracts
+	url = https://github.com/paxosglobal/paxos-token-contracts
+[submodule "vendor/frontier-stable-token"]
+	path = vendor/frontier-stable-token
+	url = https://github.com/wyostable/frontier-stable-token
+[submodule "cmtat/CMTAT"]
+	path = cmtat/CMTAT
+	url = https://github.com/CMTA/CMTAT
+[submodule "cmtat/CMTAT-Confidential"]
+	path = cmtat/CMTAT-Confidential
+	url = https://github.com/CMTA/CMTAT-Confidential
+[submodule "cmtat/RuleEngine"]
+	path = cmtat/RuleEngine
+	url = https://github.com/CMTA/RuleEngine
+[submodule "cmtat/CMTAT-Factory"]
+	path = cmtat/CMTAT-Factory
+	url = https://github.com/CMTA/CMTAT-Factory
+[submodule "cmtat/Rules"]
+	path = cmtat/Rules
+	url = https://github.com/CMTA/Rules
+[submodule "cmtat/SnapshotEngine"]
+	path = cmtat/SnapshotEngine
+	url = https://github.com/CMTA/SnapshotEngine
+[submodule "cmtat/CMTAT-LayerZero"]
+	path = cmtat/CMTAT-LayerZero
+	url = https://github.com/CMTA/CMTAT-LayerZero
+[submodule "cmtat/CMTAT-CCIP"]
+	path = cmtat/CMTAT-CCIP
+	url = https://github.com/CMTA/CMTAT-CCIP
+[submodule "cmtat/CMTAT-ACE"]
+	path = cmtat/CMTAT-ACE
+	url = https://github.com/CMTA/CMTAT-ACE
