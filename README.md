@@ -1,5 +1,7 @@
 # CMTAT ⇄ Stablecoin Feature Comparison
 
+**Version 0.1.0**
+
 Feature-by-feature comparison between **CMTAT** (the CMTA Token standard, Solidity/EVM implementation) and seven production stablecoins whose source is vendored in this repository.
 
 The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?**
@@ -432,6 +434,7 @@ At 11.3 KiB it is also the smallest deployment in the set.
 
 ## See also
 
+* [`CHANGELOG.md`](./CHANGELOG.md) — what changed in each version of this analysis.
 * [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md) — per-directory guide to each stablecoin codebase and its main files.
 * [`vendor-stablecoins/SUMMARY.md`](./vendor-stablecoins/SUMMARY.md) — stablecoin-to-stablecoin comparison.
 * [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md) — 14 documented errors in CMTAT's own stablecoin comparison, with suggested fixes.
