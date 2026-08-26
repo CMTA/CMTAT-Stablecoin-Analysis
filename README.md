@@ -32,7 +32,7 @@ Every claim below was read from the code pinned in this repository, not from mar
 
 ### 1.1 CMTAT and its companion projects
 
-Everything under [`cmtat/`](./cmtat/): the token standard, the seven companion projects that extend it, and two privacy-preserving reimplementations (`CMTAT-Confidential`, `private-CMTAT-aztec`) that are alternative token builds rather than companions.
+Everything under [`cmtat/`](./cmtat/): the token standard, the seven companion projects that extend it, two privacy-preserving reimplementations (`CMTAT-Confidential`, `private-CMTAT-aztec`), and `CMTAT-Solana`, which is a written specification rather than code.
 
 | Project | Role | Tag | Commit | Date | Solidity |
 | --- | --- | --- | --- | --- | --- |
@@ -46,6 +46,7 @@ Everything under [`cmtat/`](./cmtat/): the token standard, the seven companion p
 | CMTAT-CCIP | Chainlink CCIP deployment scripts | *(untagged)* | `c4f946d` | 2025-12-01 | 0.8.x |
 | CMTAT-Confidential | Zama FHE confidential variant | `v1.0.0` | `285ed93` | 2026-07-10 | 0.8.x |
 | private-CMTAT-aztec | private CMTAT on the Aztec L2 — **prototype** | *(untagged)* | `61f4220` | 2025-07-28 | — (Noir) |
+| CMTAT-Solana | **specification** for a CMTAT-compliant token on Solana | `v1.0.0` | `f8fdad8` | 2025-12-08 | — (no code) |
 
 The CMTAT and RuleEngine pins are **release candidates**: their `version()` strings report `3.3.0` and `3.0.0`, but the tagged commits are `v3.3.0-rc3` and `v3.0.0-rc6`.
 
@@ -287,7 +288,7 @@ Two concrete misses, both variant-independent:
 | Bridge mechanism | — | — | mint/burn via LayerZero; **either** mint/burn or lock/release via CCIP pools | CCTP mint/burn | — | — | **both**: lock/unlock on the hub, mint/burn on spokes | — | — |
 | Bridge-level pause | — | — | ✅ owner-gated `pause()` on each LayerZero adapter | ⚠️ token-level only | — | — | ⚠️ token-level only | — | — |
 | Bridge-level rate limit / allowlist | — | — | ✅ **CMTAT-CCIP** — per-lane CCIP pool rate limiters and allowlists | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Non-EVM implementation | ❌ | ⚠️ Solana, Tezos, Canton in external repos; **private-CMTAT-aztec** is vendored here | — | ❌ | ❌ | ❌ | ✅ Solana program in-repo | ❌ | ⚠️ separate codebases |
+| Non-EVM implementation | ❌ | ⚠️ **private-CMTAT-aztec** (Noir) vendored here; **CMTAT-Solana** is a specification, not a program; Tezos and Canton in external repos | — | ❌ | ❌ | ❌ | ✅ Solana program in-repo | ❌ | ⚠️ separate codebases |
 | Confidential balances | ❌ | ✅ two routes: **CMTAT-Confidential** (Zama FHE, EVM) and **private-CMTAT-aztec** (Aztec L2, Noir; prototype) | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | On-chain legal documents | ❌ | ✅ ERC-1643 `DocumentERC1643Module` | — | ❌ | ❌ | ❌ | ⚠️ `contractUri` | ❌ | ❌ |
 | On-chain token metadata (ISIN, terms) | ❌ | ✅ `ExtraInformationModule` | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -358,6 +359,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 * **Confidential balances**, by two different routes: `CMTAT-Confidential` keeps the token on the EVM and encrypts balances with Zama FHE; `private-CMTAT-aztec` reimplements it in Noir on the Aztec privacy L2, where transactions stay private to holders while the issuer keeps an audit view. The Aztec build is an unaudited prototype and its README warns that Aztec itself is still changing rapidly.
 * **Beacon + CREATE2 factory deployment** (CMTAT-Factory).
 * **A bridge that can be paused independently of the token** — CMTAT-LayerZero's adapters each carry their own owner-gated `pause()`. Wyoming's OFT adapters have no such switch; halting a bridge there means pausing the token.
+* **A published Solana specification.** [`CMTAT-Solana`](./cmtat/CMTAT-Solana/) v1.0.0 maps the CMTAT feature set onto SPL Token-2022 extensions (permanent delegate, transfer hook, default account state), so an issuer can build a compliant token on Solana without an EVM port. It is guidance, not a program — Wyoming is the only project here that ships running Solana code, and that is a bridge endpoint rather than the token.
 * **Bridge-agnostic cross-chain entry points** — ERC-7802 is a standard interface any bridge can drive; every stablecoin here is wired to one specific bridge (CCTP for Circle, LayerZero for Wyoming). CMTAT has working tooling for both LayerZero and CCIP.
 * **Compliance as runtime configuration** (CMTAT-ACE) — policies are attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook; no stablecoin here can reorder a policy chain without an upgrade.
 * **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor-stablecoins/`.

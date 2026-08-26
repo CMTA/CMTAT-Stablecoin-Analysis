@@ -43,3 +43,6 @@
 [submodule "cmtat/private-CMTAT-aztec"]
 	path = cmtat/private-CMTAT-aztec
 	url = https://github.com/CMTA/private-CMTAT-aztec
+[submodule "cmtat/CMTAT-Solana"]
+	path = cmtat/CMTAT-Solana
+	url = https://github.com/CMTA/CMTAT-Solana
