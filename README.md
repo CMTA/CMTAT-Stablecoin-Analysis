@@ -52,8 +52,6 @@ The CMTAT and RuleEngine pins are **release candidates**: their `version()` stri
 
 > **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)).
 
-CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor-stablecoins/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
-
 ### 1.2 Third-party dependencies read directly
 
 | Project | Why it is here | Tag | Commit | Date |
