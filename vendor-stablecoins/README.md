@@ -14,6 +14,7 @@ Two kinds of directories live here:
 | [`monerium-smart-contracts`](#monerium--monerium-smart-contracts) | Monerium — EURe, GBPe, USDe, ISKe | submodule | `514bee7` (v2.0.0+24, 2025-08-21) |
 | [`frontier-stable-token`](#wyoming--frontier-stable-token) | Wyoming Stable Token Commission — FRNT, wFRNT | submodule | `f8aa140` (untagged, 2026-04-30) |
 | [`cv_eth_0xf4ccc80c…`](#coinvertible--cv_eth_0xf4ccc80c) | Société Générale FORGE — CoinVertible (EURCV, USDCV) | Etherscan dump | impl. `0xF4ccC80C…` |
+| [`eurr_eth_0xb6de5eab…`](#bridge--eurr_eth_0xb6de5eab) | Bridge Building (Stripe) — EURR, the Revolut Euro | Etherscan dump | impl. `0xb6De5eAb…` |
 | [`usdt_eth_0xdac17f95…`](#tether--usdt_eth_0xdac17f95) | Tether — USDT | Etherscan dump | `0xdac17f95…` |
 
 Etherscan-dump directories are named `<token>_eth_<address>_code`, where the address is the **implementation** contract the verified source was downloaded from — not necessarily the address users interact with. Both were downloaded on 2026-08-26 through Etherscan with the [MetaSuites](https://chromewebstore.google.com/detail/metasuites-builders-swiss/) extension (BlockSec), which named them after the wrong token; they were renamed to match their contents.
@@ -145,6 +146,27 @@ Solidity 0.8.22, UUPS upgradeable, OpenZeppelin 4.x upgradeable vendored alongsi
 | `abi.json` | ABI of the implementation |
 
 Notable design points: a transfer to a registered *redemption address* is silently rerouted to the `registrar` and emits `RedemptionStarted`; upgrades are two-step (`authorizeImplementation` by the registrar/operations, then `upgradeTo` by the `technical` operator); `pause` stops everything except registrar `mint`/`burn`.
+
+## Bridge — `eurr_eth_0xb6de5eab…`
+
+**EURR**, the euro stablecoin Revolut distributes in the EEA, issued by **Bridge Building, a Stripe company**. Solidity ^0.8.24, OpenZeppelin 5.3.0, UUPS.
+
+* Product announcement: <https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/>
+* Implementation: <https://etherscan.io/address/0xb6de5eabb9ffaf853235a6b96886fb87f73400a8>
+* Token address taken from [CoinGecko](https://www.coingecko.com/en/coins/revolut-euro)
+
+| Path | Role |
+| --- | --- |
+| `src/v3/StablecoinTemplateV3.sol` | The token: `wrap` / `unwrap` over a reserve-ledger ERC-20, legacy `mint` / `burn`, `burnFromBlockedAddress`, `completeMigrationToWrapped` |
+| `src/v3/StablecoinTemplateV3Base.sol` | Roles, pause, the `IAuthRegistry` lookups (`isBlocked`, `isMintRecipient`), `maxSupply`, policy-id setters, `_update` guard, `_authorizeUpgrade` |
+| `src/v3/StablecoinTemplateV3Storage.sol` | EIP-7201 namespaced storage plus a transient-storage slot for the temporary-unblock flag |
+| `src/v3/StablecoinTemplateV3ErrorsAndEvents.sol` | Custom errors and events |
+| `src/utils/IERC20Mintable.sol` | Interface of the reserve-ledger token the wrapper holds |
+| `dependencies/auth-registry-1/src/IAuthRegistry.sol` | `isAuthorized(policyId, user)` — the whole external compliance surface |
+| `dependencies/@openzeppelin-*-5.3.0/**` | Vendored OZ dependencies as flattened by Etherscan |
+| `abi.json` | ABI of the implementation |
+
+Notable design points. The contract is named a **template**, and behaves as one: the same code is parameterised by a reserve-ledger address, an auth registry and a decimals value rather than being written per currency. It is a **wrapper**, not a plain mint/burn token — `wrap` pulls reserve-ledger tokens from the caller and mints 1:1, `unwrap` burns and returns them, so the backing is held in the contract rather than attested off-chain. Direct `mint` / `burn` still exist but are disabled for good once an admin calls `completeMigrationToWrapped()`, which asserts that the reserve balance already equals `totalSupply()`. Compliance is entirely external: every check is `AUTH_REGISTRY.isAuthorized(policyId, account)`, with separate policy ids for transfers and for mint recipients, both swappable by the admin — the storage layout still holds `__DEPRECATED_blockedList` and `__DEPRECATED_mintRecipientList` from before that move. `maxSupply` caps issuance in-token. `PAUSER_ROLE` and `UNPAUSER_ROLE` are separate, and `_revokeRole` refuses to remove the last admin.
 
 ## Tether — `usdt_eth_0xdac17f95…`
 

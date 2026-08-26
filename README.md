@@ -1,6 +1,6 @@
 # CMTAT ⇄ Stablecoin Feature Comparison
 
-Feature-by-feature comparison between **CMTAT** (the CMTA Token standard, Solidity/EVM implementation) and six production stablecoins whose source is vendored in this repository.
+Feature-by-feature comparison between **CMTAT** (the CMTA Token standard, Solidity/EVM implementation) and seven production stablecoins whose source is vendored in this repository.
 
 The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?**
 
@@ -65,7 +65,7 @@ Every ACE policy named in this document (`VolumeRatePolicy`, `SecureMintPolicy`,
 
 ### 1.3 Stablecoins analysed
 
-Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and two verified-source dumps taken from Etherscan.
+Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and three verified-source dumps taken from Etherscan.
 
 | Issuer | Token(s) | Kind | Tag | Commit / address | Date | Solidity |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -74,6 +74,7 @@ Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream r
 | Monerium | EURe, GBPe, USDe, ISKe | submodule | `v2.0.0`+24 | `514bee7` | 2025-08-21 | 0.8.x |
 | Wyoming | FRNT, wFRNT | submodule | *(untagged)* | `f8aa140` | 2026-04-30 | 0.8.22 |
 | SG-FORGE | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
+| Bridge (Stripe) | EURR — [Revolut Euro](https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/) | Etherscan dump | — | impl. `0xb6De5eAb…` | dumped 2026-08-26 | ^0.8.24 |
 | Tether | USDT | Etherscan dump | — | `0xdac17f95…` | dumped 2026-08-26 | 0.4.17 |
 
 The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md).
@@ -109,13 +110,13 @@ CMTAT is not one contract, so each table splits it into **three** columns. Light
 
 Symbols: ✅ available · ⚠️ partial, indirect or non-standard · ❌ absent · 🏭 companion feature reachable from Light (CMTAT-Factory only).
 
-Stablecoin column abbreviations: **USDC** = Circle, **PAX** = Paxos, **MON** = Monerium, **FRNT** = Wyoming, **CV** = CoinVertible, **USDT** = Tether.
+Stablecoin column abbreviations: **USDC** = Circle, **PAX** = Paxos, **MON** = Monerium, **FRNT** = Wyoming, **CV** = CoinVertible, **EURR** = Revolut Euro, **USDT** = Tether.
 
 ## 3. The CMTAT stack
 
 CMTAT is deliberately split across several repositories. Knowing what each one owns is the key to reading the tables.
 
-It is also split *within* the token. The 25 modules under `contracts/modules/wrapper/` (core, extensions, options, controllers, security) sit behind a layered set of base contracts, and each of the 21 shipped deployment variants is a thin assembly of them — `CMTATStandardStandalone`, for instance, is 66 lines that inherit a base and add a rule-engine hook and a forwarder. An issuer whose requirements match no shipped variant composes their own from the same parts rather than forking the token, and the same seam lets an integrator graft on features CMTAT does not have. Two of the companion projects are exactly that: `SnapshotEngine`'s in-token variants and all of `CMTAT-ACE`'s builds are third-party assemblies of CMTAT base contracts. None of the six stablecoins is factored this way — each is a fixed inheritance chain, and adding a feature means editing the token.
+It is also split *within* the token. The 25 modules under `contracts/modules/wrapper/` (core, extensions, options, controllers, security) sit behind a layered set of base contracts, and each of the 21 shipped deployment variants is a thin assembly of them — `CMTATStandardStandalone`, for instance, is 66 lines that inherit a base and add a rule-engine hook and a forwarder. An issuer whose requirements match no shipped variant composes their own from the same parts rather than forking the token, and the same seam lets an integrator graft on features CMTAT does not have. Two of the companion projects are exactly that: `SnapshotEngine`'s in-token variants and all of `CMTAT-ACE`'s builds are third-party assemblies of CMTAT base contracts. None of the seven stablecoins is factored this way — each is a fixed inheritance chain, and adding a feature means editing the token.
 
 | Project | What it owns | Bound to the token by | Light? |
 | --- | --- | --- | --- |
@@ -154,22 +155,22 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 4. Token standards & signature flows
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ERC-20 with standard return values | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ no `return` |
-| Updatable `name` / `symbol` | ✅ | ✅ | — | ⚠️ `symbol` only, at the V2.2 upgrade | ❌ | ❌ | ❌ | ❌ | ❌ |
-| `batchTransfer` / `batchMint` / `batchBurn` | ✅ | ✅ | — | ⚠️ `FiatTokenUtil` (3009 only) | ✅ `transferFromBatch` | ⚠️ `BatchMint` helper | ⚠️ `Multicall` | ❌ | ❌ |
-| ERC-2612 `permit` | ❌ | ✅ `Permit` | — | ✅ (V2+) | ✅ | ✅ | ✅ | ❌ | ❌ |
-| ERC-3009 `transferWithAuthorization` | ❌ | ❌ (planned, [issue #346](https://github.com/CMTA/CMTAT/issues/346)) | ❌ | ✅ | ✅ + batch | ❌ | ❌ | ❌ | ❌ |
-| ERC-1271 smart-account signatures | ❌ | ✅ `Permit` (via OZ) | — | ✅ `SignatureChecker` | ✅ | ✅ | ⚠️ via OZ | ❌ | ❌ |
-| ERC-1404 restriction codes | ❌ | ✅ all except `Allowlist` | ✅ **RuleEngine** returns them; each **Rules** rule owns a code range | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ERC-2771 meta-transactions | ❌ | ✅ `Standard`, `Allowlist` | ✅ RuleEngine and rule modules are ERC-2771-aware | ❌ | ⚠️ covered by 3009 | ❌ | ❌ | ❌ | ❌ |
-| ERC-6357 `multicall` | ❌ | ✅ `Permit` | — | ❌ | ❌ | ❌ | ⚠️ OZ `Multicall` | ❌ | ❌ |
-| ERC-1363 `transferAndCall` | ❌ | ✅ `ERC1363` | — | ❌ | ❌ | ⚠️ ERC-677 via controller shim | ❌ | ❌ | ❌ |
-| ERC-7802 cross-chain mint/burn | ❌ | ✅ all except `Allowlist` | — | ❌ (CCTP) | ❌ | ❌ | ❌ (LayerZero OFT) | ❌ | ❌ |
-| ERC-3643 (partial) | ❌ | ⚠️ token-side interfaces only, via `IERC3643Partial` — **no on-chain identity layer** | ⚠️ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` fill the identity slot of an ERC-3643 token, not of CMTAT | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ERC-7551 / ERC-7943 | ⚠️ ERC-7943 errors only | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ERC-7201 namespaced storage | ✅ | ✅ | ✅ RuleEngine, Rules, SnapshotEngine | ❌ | ⚠️ explicit `BaseStorageV3` | ✅ | ⚠️ OZ | ❌ `*DataLayout` | ❌ |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ERC-20 with standard return values | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ no `return` | ✅ |
+| Updatable `name` / `symbol` | ✅ | ✅ | — | ⚠️ `symbol` only, at the V2.2 upgrade | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `batchTransfer` / `batchMint` / `batchBurn` | ✅ | ✅ | — | ⚠️ `FiatTokenUtil` (3009 only) | ✅ `transferFromBatch` | ⚠️ `BatchMint` helper | ⚠️ `Multicall` | ❌ | ❌ | ❌ |
+| ERC-2612 `permit` | ❌ | ✅ `Permit` | — | ✅ (V2+) | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| ERC-3009 `transferWithAuthorization` | ❌ | ❌ (planned, [issue #346](https://github.com/CMTA/CMTAT/issues/346)) | ❌ | ✅ | ✅ + batch | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-1271 smart-account signatures | ❌ | ✅ `Permit` (via OZ) | — | ✅ `SignatureChecker` | ✅ | ✅ | ⚠️ via OZ | ❌ | ❌ | ❌ ECDSA only |
+| ERC-1404 restriction codes | ❌ | ✅ all except `Allowlist` | ✅ **RuleEngine** returns them; each **Rules** rule owns a code range | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-2771 meta-transactions | ❌ | ✅ `Standard`, `Allowlist` | ✅ RuleEngine and rule modules are ERC-2771-aware | ❌ | ⚠️ covered by 3009 | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-6357 `multicall` | ❌ | ✅ `Permit` | — | ❌ | ❌ | ❌ | ⚠️ OZ `Multicall` | ❌ | ❌ | ❌ |
+| ERC-1363 `transferAndCall` | ❌ | ✅ `ERC1363` | — | ❌ | ❌ | ⚠️ ERC-677 via controller shim | ❌ | ❌ | ❌ | ❌ |
+| ERC-7802 cross-chain mint/burn | ❌ | ✅ all except `Allowlist` | — | ❌ (CCTP) | ❌ | ❌ | ❌ (LayerZero OFT) | ❌ | ❌ | ❌ |
+| ERC-3643 (partial) | ❌ | ⚠️ token-side interfaces only, via `IERC3643Partial` — **no on-chain identity layer** | ⚠️ **Rules** `IdentityRegistryWhitelist`, `RuleIdentityRegistry` fill the identity slot of an ERC-3643 token, not of CMTAT | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-7551 / ERC-7943 | ⚠️ ERC-7943 errors only | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-7201 namespaced storage | ✅ | ✅ | ✅ RuleEngine, Rules, SnapshotEngine | ❌ | ⚠️ explicit `BaseStorageV3` | ✅ | ⚠️ OZ | ❌ `*DataLayout` | ❌ | ✅ + transient storage |
 
 **Reading.**
 
@@ -181,24 +182,24 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 5. Supply control (issuance)
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Role-gated mint | ✅ `MINTER_ROLE` | ✅ | — | ✅ minters | ✅ `SUPPLY_CONTROLLER_ROLE` | ✅ `system` | ✅ `MINTER_ROLE` | ✅ registrar only | ⚠️ `owner` only |
-| Role-gated burn | ✅ `BURNER_ROLE` | ✅ (+ `BURNER_FROM`, `BURNER_SELF`) | — | ⚠️ minter, own balance only | ✅ | ✅ `system` | ✅ `BURNER_ROLE` | ✅ registrar only | ⚠️ `owner` |
-| Mint to an arbitrary address | ✅ | ✅ | — | ✅ (within allowance) | ✅ | ✅ | ✅ | ✅ | ❌ `issue()` credits `owner` only |
-| **Per-minter mint allowance** | ❌ | ❌ in-token | ✅ **Rules** `RuleMintAllowance` — `setMintAllowance`, `increase`/`decreaseMintAllowance`, decremented per mint | ✅ `minterAllowance` | ✅ | ✅ + global cap | ❌ | ❌ | ❌ |
-| Rate-limited minting (time window) | ❌ | ❌ | ⚠️ **CMTAT-ACE** `VolumeRatePolicy` caps issuance per **recipient** per period, not per minter (see below) | ❌ | ✅ `RateLimit.sol` | ❌ | ❌ | ❌ | ❌ |
-| Max total supply cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxTotalSupply` (+ `…ERC3643`) | ❌ | ❌ | ⚠️ via allowance cap | ❌ | ❌ | ❌ |
-| Per-call amount cap / ticket size | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `MaxPolicy`, `VolumePolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Proof-of-reserve-backed minting** | ❌ | ❌ in-token | ✅ **Rules** `RuleChainlinkPoR`, or **CMTAT-ACE** `SecureMintPolicy` — both cap minting at a Chainlink PoR feed | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Minter management in a separate contract | ❌ RBAC only | ❌ RBAC only | ✅ **RuleEngine** + `RuleMintAllowance` | ✅ `MasterMinter` | ✅ `SupplyControl` | ❌ | ❌ | ❌ | ❌ |
-| Atomic burn-then-mint | ✅ `burnAndMint` | ✅ | — | ❌ | ❌ | ⚠️ `recover` | ❌ | ❌ | ❌ |
-| Mint/burn allowed while paused | ❌ | ❌ | — | ❌ | ✅ by design | n/a (no pause) | ❌ | ❌ | ❌ |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Role-gated mint | ✅ `MINTER_ROLE` | ✅ | — | ✅ minters | ✅ `SUPPLY_CONTROLLER_ROLE` | ✅ `system` | ✅ `MINTER_ROLE` | ✅ registrar only | ⚠️ `owner` only | ✅ `MINTER_ROLE` |
+| Role-gated burn | ✅ `BURNER_ROLE` | ✅ (+ `BURNER_FROM`, `BURNER_SELF`) | — | ⚠️ minter, own balance only | ✅ | ✅ `system` | ✅ `BURNER_ROLE` | ✅ registrar only | ⚠️ `owner` | ✅ `MINTER_ROLE`, own balance |
+| Mint to an arbitrary address | ✅ | ✅ | — | ✅ (within allowance) | ✅ | ✅ | ✅ | ✅ | ❌ `issue()` credits `owner` only | ⚠️ authorised recipients only |
+| **Per-minter mint allowance** | ❌ | ❌ in-token | ✅ **Rules** `RuleMintAllowance` — `setMintAllowance`, `increase`/`decreaseMintAllowance`, decremented per mint | ✅ `minterAllowance` | ✅ | ✅ + global cap | ❌ | ❌ | ❌ | ❌ |
+| Rate-limited minting (time window) | ❌ | ❌ | ⚠️ **CMTAT-ACE** `VolumeRatePolicy` caps issuance per **recipient** per period, not per minter (see below) | ❌ | ✅ `RateLimit.sol` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Max total supply cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxTotalSupply` (+ `…ERC3643`) | ❌ | ❌ | ⚠️ via allowance cap | ❌ | ❌ | ❌ | ✅ `_maxSupply` |
+| Per-call amount cap / ticket size | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `MaxPolicy`, `VolumePolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Proof-of-reserve-backed minting** | ❌ | ❌ in-token | ✅ **Rules** `RuleChainlinkPoR`, or **CMTAT-ACE** `SecureMintPolicy` — both cap minting at a Chainlink PoR feed | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ structural: wrapped mode holds 1:1 reserve tokens |
+| Minter management in a separate contract | ❌ RBAC only | ❌ RBAC only | ✅ **RuleEngine** + `RuleMintAllowance` | ✅ `MasterMinter` | ✅ `SupplyControl` | ❌ | ❌ | ❌ | ❌ | ⚠️ registry gates recipients, not minters |
+| Atomic burn-then-mint | ✅ `burnAndMint` | ✅ | — | ❌ | ❌ | ⚠️ `recover` | ❌ | ❌ | ❌ | ❌ |
+| Mint/burn allowed while paused | ❌ | ❌ | — | ❌ | ✅ by design | n/a (no pause) | ❌ | ❌ | ❌ | ❌ |
 
 **Reading.**
 
 * **Light gates minting on `MINTER_ROLE` and nothing else** — no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
-* **The companion projects close most of the gap.** `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` ties issuance to an on-chain reserve attestation, which none of the six stablecoins does.
+* **The companion projects close most of the gap.** `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` ties issuance to an on-chain reserve attestation, which none of the seven stablecoins does.
   * Every one of those rules needs the RuleEngine, so none of it is reachable from Light. An issuer who wants USDC-grade minter controls moves to Standard or Permit, which adds roughly 11 KiB of bytecode and two external contracts to deploy and govern.
 * **Paxos's rate limit has no off-the-shelf equivalent.** CMTAT-ACE's `VolumeRatePolicy` is the closest thing in the stack, and differs on two counts:
   * *Wrong subject.* It keys on an address supplied by the extractor, and for `mint(address,uint256)` the shipped `MintBurnExtractor` exports the **recipient**, never the caller. Attaching it to `mint` caps how much each address can receive per period, not how much a minter can issue; bounding the minter needs a custom extractor.
@@ -206,27 +207,27 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 6. Compliance & enforcement
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| In-token address freeze | ✅ `setAddressFrozen` + batch (`ENFORCER_ROLE`) | ✅ | — | ✅ | ✅ | ❌ external | ❌ external | ✅ batch | ✅ |
-| Global pause | ✅ `PauseModule` | ✅ | — | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Permanent deactivation | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` |
-| Pre-trade check functions | ✅ `canTransfer` / `canSend` / `canReceive` | ✅ + `detectTransferRestriction` | ✅ every **Rules** rule exposes both | ❌ | ❌ | ❌ | ⚠️ `hasAccess` | ✅ `findNotFrozen` | ❌ |
-| Forced burn / seizure | ✅ `forcedBurn` (frozen accounts) | ❌ | — | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `recover` only | ❌ | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` |
-| Forced transfer to a third party | ❌ | ✅ `forcedTransfer` | — | ❌ | ⚠️ wipe + re-mint | ✅ `recover` (signature-gated) | ❌ | ❌ | ❌ |
-| Partial balance freeze | ❌ | ✅ `freezePartialTokens` | ⚠️ **Rules** `RuleERC2980` (whitelist + frozenlist) | ❌ | ⚠️ whole address | ❌ | ❌ | ⚠️ whole address | ⚠️ whole address |
-| **External / shared blacklist** | ❌ | ✅ via engine | ✅ **RuleEngine** + **Rules** `RuleBlacklist` — one engine, several tokens | ❌ | ❌ | ✅ shared validator | ✅ shared registry | ❌ | ⚠️ getters for successors |
-| Allowlist / whitelist | ❌ | ✅ `Allowlist` variant (`ALLOWLIST_ROLE`) | ✅ **Rules** `RuleWhitelist`, `RuleReceiverWhitelist`, `RuleSpenderWhitelist`, `RuleWhitelistWrapper` | ❌ | ❌ | ⚠️ custom validator | ⚠️ pluggable registry | ❌ | ❌ |
-| **Sanctions-oracle screening** | ❌ | ❌ in-token | ✅ **Rules** `RuleSanctionsList` (Chainalysis), reusable as an ACE policy via `TransferValidationPolicy` | ❌ | ❌ | ❌ | ✅ via registry | ❌ | ❌ |
-| Pluggable transfer-rule engine | ❌ **no `setRuleEngine`** | ✅ all except `Allowlist` | ✅ **RuleEngine** is that engine | ❌ | ❌ | ✅ `IValidator` | ✅ `IAccessRegistry` | ❌ | ❌ |
-| Per-holder balance cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxBalance` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Per-holder volume cap per period | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `VolumeRatePolicy` (fixed tumbling period) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Trading-hours / settlement window | ❌ | ❌ | ✅ **CMTAT-ACE** `IntervalPolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Externalised pause and RBAC | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `PausePolicy`, `RoleBasedAccessControlPolicy` (Standard variant) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Compliance change without redeploy | ❌ | ⚠️ swap the RuleEngine | ✅ **CMTAT-ACE** — attach / detach / reorder policies by governance | ❌ | ❌ | ⚠️ swap the validator | ⚠️ swap the registry | ❌ | ❌ |
-| **Per-transfer operator approval** | ❌ | ❌ in-token | ✅ **Rules** `RuleConditionalTransferLight` | ❌ | ❌ | ❌ | ❌ | ⚠️ redemption routing | ❌ |
-| Identity registry / KYC binding | ❌ | ❌ no identity-registry slot on the token | ⚠️ **Rules** ships `IdentityRegistryWhitelist` and `RuleIdentityRegistry`, but they fill an **ERC-3643** token's identity slot; reaching CMTAT means screening through the RuleEngine instead | ❌ | ❌ | ❌ | ⚠️ off-chain | ❌ | ❌ |
-| Standardised enforcement events | ⚠️ `ForcedTransfer` event only | ✅ ERC-7551 / ERC-7943 | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| In-token address freeze | ✅ `setAddressFrozen` + batch (`ENFORCER_ROLE`) | ✅ | — | ✅ | ✅ | ❌ external | ❌ external | ✅ batch | ✅ | ❌ moved to the registry |
+| Global pause | ✅ `PauseModule` | ✅ | — | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Permanent deactivation | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` | ❌ |
+| Pre-trade check functions | ✅ `canTransfer` / `canSend` / `canReceive` | ✅ + `detectTransferRestriction` | ✅ every **Rules** rule exposes both | ❌ | ❌ | ❌ | ⚠️ `hasAccess` | ✅ `findNotFrozen` | ❌ | ✅ `isBlocked`, `isMintRecipient` |
+| Forced burn / seizure | ✅ `forcedBurn` (frozen accounts) | ❌ | — | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `recover` only | ❌ | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` | ✅ `burnFromBlockedAddress` |
+| Forced transfer to a third party | ❌ | ✅ `forcedTransfer` | — | ❌ | ⚠️ wipe + re-mint | ✅ `recover` (signature-gated) | ❌ | ❌ | ❌ | ❌ |
+| Partial balance freeze | ❌ | ✅ `freezePartialTokens` | ⚠️ **Rules** `RuleERC2980` (whitelist + frozenlist) | ❌ | ⚠️ whole address | ❌ | ❌ | ⚠️ whole address | ⚠️ whole address | ❌ |
+| **External / shared blacklist** | ❌ | ✅ via engine | ✅ **RuleEngine** + **Rules** `RuleBlacklist` — one engine, several tokens | ❌ | ❌ | ✅ shared validator | ✅ shared registry | ❌ | ⚠️ getters for successors | ✅ `IAuthRegistry`, policy-keyed |
+| Allowlist / whitelist | ❌ | ✅ `Allowlist` variant (`ALLOWLIST_ROLE`) | ✅ **Rules** `RuleWhitelist`, `RuleReceiverWhitelist`, `RuleSpenderWhitelist`, `RuleWhitelistWrapper` | ❌ | ❌ | ⚠️ custom validator | ⚠️ pluggable registry | ❌ | ❌ | ✅ mint-recipient policy |
+| **Sanctions-oracle screening** | ❌ | ❌ in-token | ✅ **Rules** `RuleSanctionsList` (Chainalysis), reusable as an ACE policy via `TransferValidationPolicy` | ❌ | ❌ | ❌ | ✅ via registry | ❌ | ❌ | ⚠️ registry-dependent, not vendored |
+| Pluggable transfer-rule engine | ❌ **no `setRuleEngine`** | ✅ all except `Allowlist` | ✅ **RuleEngine** is that engine | ❌ | ❌ | ✅ `IValidator` | ✅ `IAccessRegistry` | ❌ | ❌ | ✅ `IAuthRegistry` |
+| Per-holder balance cap | ❌ | ❌ in-token | ✅ **Rules** `RuleMaxBalance` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Per-holder volume cap per period | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `VolumeRatePolicy` (fixed tumbling period) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Trading-hours / settlement window | ❌ | ❌ | ✅ **CMTAT-ACE** `IntervalPolicy` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Externalised pause and RBAC | ❌ | ❌ in-token | ✅ **CMTAT-ACE** `PausePolicy`, `RoleBasedAccessControlPolicy` (Standard variant) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ both in-token |
+| Compliance change without redeploy | ❌ | ⚠️ swap the RuleEngine | ✅ **CMTAT-ACE** — attach / detach / reorder policies by governance | ❌ | ❌ | ⚠️ swap the validator | ⚠️ swap the registry | ❌ | ❌ | ✅ swap the policy id |
+| **Per-transfer operator approval** | ❌ | ❌ in-token | ✅ **Rules** `RuleConditionalTransferLight` | ❌ | ❌ | ❌ | ❌ | ⚠️ redemption routing | ❌ | ❌ |
+| Identity registry / KYC binding | ❌ | ❌ no identity-registry slot on the token | ⚠️ **Rules** ships `IdentityRegistryWhitelist` and `RuleIdentityRegistry`, but they fill an **ERC-3643** token's identity slot; reaching CMTAT means screening through the RuleEngine instead | ❌ | ❌ | ❌ | ⚠️ off-chain | ❌ | ❌ | ⚠️ via registry policies |
+| Standardised enforcement events | ⚠️ `ForcedTransfer` event only | ✅ ERC-7551 / ERC-7943 | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 **Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. That is enough for a plain fiat stablecoin, and it is the case CMTA's documentation makes.
 
@@ -237,18 +238,20 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 * **Lite** — swaps the RuleEngine for the PolicyEngine on transfer validation, and keeps CMTAT's roles.
 * **Standard** — policy-authoritative: ACE gates mint, burn, transfer, enforcement and admin, and the token drops `AccessControlUpgradeable` for `OwnableUpgradeable`. That is a real trade-off, giving up the granular RBAC that is otherwise one of CMTAT's advantages over USDC and USDT.
 
+**EURR externalises compliance further than any other token here.** Both of its checks resolve through one external contract: `isBlocked(a)` is `!AUTH_REGISTRY.isAuthorized(transferPolicyId, a)` and `isMintRecipient(a)` is `isAuthorized(mintRecipientPolicyId, a)`. The registry is addressed by **policy id**, and both ids are settable by the admin, so a single registry serves several policies and the token chooses which one governs transfers and which governs minting — closer to CMTAT-ACE's per-selector model than to Monerium's single validator. Its storage still carries `__DEPRECATED_blockedList` and `__DEPRECATED_mintRecipientList`, so V3 moved these lists out of the token. Two caveats: the registry itself is not in this dump, only `IAuthRegistry`, so whether a policy behaves as an allowlist or a blocklist depends on configuration this analysis cannot see; and `burnFromBlockedAddress` briefly flips a transient-storage unblock flag so `_burn` can pass its own transfer guard.
+
 **Light gets `forcedBurn` but not `forcedTransfer`; every other variant gets the reverse.** Paxos and CoinVertible can freeze then wipe; USDT can destroy. No single CMTAT deployment can both burn from a frozen address and move its tokens elsewhere.
 
 ## 7. Access control & governance
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Model | OZ `AccessControl`, **5 roles** | OZ `AccessControl`, ~15 roles | RBAC, `Ownable` or `Ownable2Step` flavours (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory); `Ownable` only for LayerZero and ACE | 5 bespoke singletons | OZ `AccessControlDefaultAdminRules` | `Ownable2Step` + admin/system | OZ `AccessControl`, 8 roles | 3 bespoke operators | single `owner` |
-| Roles | `DEFAULT_ADMIN`, `MINTER`, `BURNER`, `PAUSER`, `ENFORCER` | + `ERC20ENFORCER`, `ALLOWLIST`, `CROSS_CHAIN`, `SNAPSHOOTER`, `DOCUMENT`, `EXTRA_INFORMATION`, `DEBT`, `PROXY_UPGRADE`, … | separate managers per concern (`onlyRulesManager`, `onlyComplianceManager`, `onlySanctionListManager`) | owner, masterMinter, pauser, blacklister, rescuer | ✅ granular | 3 tiers | ✅ granular | registrar, operations, technical | — |
-| Each role grantable to several addresses | ✅ | ✅ | ✅ | ❌ one address each | ✅ | ⚠️ system/admin are sets | ✅ | ❌ immutable | ❌ |
-| Two-step role handover | ❌ OZ immediate | ❌ OZ immediate | ✅ `Ownable2Step` flavours of RuleEngine, every rule, SnapshotEngine and the factories; ❌ LayerZero and ACE | ❌ | ✅ delayed admin transfer | ✅ | ⚠️ OZ | ✅ `accept*Role` | ❌ |
-| Timelock shipped in-repo | ❌ | ❌ | ❌ | ❌ | ✅ `timelock-controller/` | ❌ | ❌ | ❌ | ❌ |
-| Roles annotated with fund-redirection risk | ⚠️ `access-control.md` | ⚠️ `access-control.md` | — | ❌ | ✅ `Roles.sol` | ⚠️ `tokendesign.md` | ⚠️ README | ❌ | ❌ |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Model | OZ `AccessControl`, **5 roles** | OZ `AccessControl`, ~15 roles | RBAC, `Ownable` or `Ownable2Step` flavours (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory); `Ownable` only for LayerZero and ACE | 5 bespoke singletons | OZ `AccessControlDefaultAdminRules` | `Ownable2Step` + admin/system | OZ `AccessControl`, 8 roles | 3 bespoke operators | single `owner` | OZ `AccessControlEnumerable` + `Ownable`, 6 roles |
+| Roles | `DEFAULT_ADMIN`, `MINTER`, `BURNER`, `PAUSER`, `ENFORCER` | + `ERC20ENFORCER`, `ALLOWLIST`, `CROSS_CHAIN`, `SNAPSHOOTER`, `DOCUMENT`, `EXTRA_INFORMATION`, `DEBT`, `PROXY_UPGRADE`, … | separate managers per concern (`onlyRulesManager`, `onlyComplianceManager`, `onlySanctionListManager`) | owner, masterMinter, pauser, blacklister, rescuer | ✅ granular | 3 tiers | ✅ granular | registrar, operations, technical | — | `DEFAULT_ADMIN`, `MINTER`, `PAUSER`, `UNPAUSER`, `BLOCKED_ADDRESS_BURNER`, `UNWRAPPER` |
+| Each role grantable to several addresses | ✅ | ✅ | ✅ | ❌ one address each | ✅ | ⚠️ system/admin are sets | ✅ | ❌ immutable | ❌ | ✅ |
+| Two-step role handover | ❌ OZ immediate | ❌ OZ immediate | ✅ `Ownable2Step` flavours of RuleEngine, every rule, SnapshotEngine and the factories; ❌ LayerZero and ACE | ❌ | ✅ delayed admin transfer | ✅ | ⚠️ OZ | ✅ `accept*Role` | ❌ | ❌ plain `Ownable` |
+| Timelock shipped in-repo | ❌ | ❌ | ❌ | ❌ | ✅ `timelock-controller/` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Roles annotated with fund-redirection risk | ⚠️ `access-control.md` | ⚠️ `access-control.md` | — | ❌ | ✅ `Roles.sol` | ⚠️ `tokendesign.md` | ⚠️ README | ❌ | ❌ | ❌ |
 
 **Reading.**
 
@@ -258,19 +261,19 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 ## 8. Upgradeability & lifecycle
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Immutable (standalone) | ✅ `CMTATStandaloneLight` | ✅ | 🏭 Factory deploys these too | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Transparent proxy | ✅ `CMTATUpgradeableLight` | ✅ | 🏭 `CMTAT_LIGHT_TP_FACTORY`, `CMTAT_TP_FACTORY` | ✅ | ⚠️ legacy admin proxy | ❌ | ❌ | ❌ | ❌ |
-| Beacon proxy (fleet-wide upgrade) | ✅ | ✅ | 🏭 `CMTAT_LIGHT_BEACON_FACTORY`, `CMTAT_BEACON_FACTORY` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| UUPS proxy | ❌ no Light UUPS contract | ✅ `CMTATUpgradeableUUPS` (Standard branch only) | ⚠️ `CMTAT_UUPS_FACTORY` — no Light or Permit implementation to point at | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Deterministic addresses (CREATE2)** | ✅ | ✅ | 🏭 **CMTAT-Factory** — same address across chains | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Dedicated upgrade role | ✅ `PROXY_UPGRADE_ROLE` | ✅ | 🏭 factories have their own access-control flavours | ⚠️ proxy admin | ✅ | ⚠️ `owner` | ✅ `UPGRADER_ROLE` | ✅ `technical` | n/a |
-| Two-step upgrade authorization | ❌ | ❌ | ❌ | ❌ | ⚠️ via timelock | ❌ | ❌ | ✅ `authorizeImplementation` → `upgradeTo` | n/a |
-| Storage-collision strategy | ✅ ERC-7201 | ✅ ERC-7201 | ✅ same | ⚠️ inheritance order | ✅ explicit storage contracts | ✅ ERC-7201 | ⚠️ OZ | ✅ `*DataLayout` | n/a |
-| **Rescue foreign ERC-20 / native coin** | ❌ | ❌ | ❌ **no companion provides it** | ✅ `rescueERC20` | ✅ `reclaimToken` | ❌ | ✅ `salvageERC20` + `salvageGas` | ❌ | ❌ |
-| Version exposed on-chain | ✅ `version()` | ✅ | ✅ `VersionModule` everywhere | ❌ | ❌ | ⚠️ `CONTRACT_ID()` | ❌ | ✅ `version()` | ❌ |
-| Irreversible shutdown | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Immutable (standalone) | ✅ `CMTATStandaloneLight` | ✅ | 🏭 Factory deploys these too | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Transparent proxy | ✅ `CMTATUpgradeableLight` | ✅ | 🏭 `CMTAT_LIGHT_TP_FACTORY`, `CMTAT_TP_FACTORY` | ✅ | ⚠️ legacy admin proxy | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Beacon proxy (fleet-wide upgrade) | ✅ | ✅ | 🏭 `CMTAT_LIGHT_BEACON_FACTORY`, `CMTAT_BEACON_FACTORY` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| UUPS proxy | ❌ no Light UUPS contract | ✅ `CMTATUpgradeableUUPS` (Standard branch only) | ⚠️ `CMTAT_UUPS_FACTORY` — no Light or Permit implementation to point at | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| **Deterministic addresses (CREATE2)** | ✅ | ✅ | 🏭 **CMTAT-Factory** — same address across chains | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Dedicated upgrade role | ✅ `PROXY_UPGRADE_ROLE` | ✅ | 🏭 factories have their own access-control flavours | ⚠️ proxy admin | ✅ | ⚠️ `owner` | ✅ `UPGRADER_ROLE` | ✅ `technical` | n/a | ⚠️ `DEFAULT_ADMIN_ROLE` |
+| Two-step upgrade authorization | ❌ | ❌ | ❌ | ❌ | ⚠️ via timelock | ❌ | ❌ | ✅ `authorizeImplementation` → `upgradeTo` | n/a | ❌ |
+| Storage-collision strategy | ✅ ERC-7201 | ✅ ERC-7201 | ✅ same | ⚠️ inheritance order | ✅ explicit storage contracts | ✅ ERC-7201 | ⚠️ OZ | ✅ `*DataLayout` | n/a | ✅ ERC-7201 |
+| **Rescue foreign ERC-20 / native coin** | ❌ | ❌ | ❌ **no companion provides it** | ✅ `rescueERC20` | ✅ `reclaimToken` | ❌ | ✅ `salvageERC20` + `salvageGas` | ❌ | ❌ | ❌ |
+| Version exposed on-chain | ✅ `version()` | ✅ | ✅ `VersionModule` everywhere | ❌ | ❌ | ⚠️ `CONTRACT_ID()` | ❌ | ✅ `version()` | ❌ | ❌ |
+| Irreversible shutdown | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` | ⚠️ `completeMigrationToWrapped()` is one-way |
 
 **Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor-stablecoins/` has:
 
@@ -284,30 +287,30 @@ Two concrete misses, both variant-independent:
 
 ## 9. Yield, cross-chain and extras
 
-| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| On-chain balance snapshots | ❌ no `setSnapshotEngine` | ✅ `Snapshot` variant / `setSnapshotEngine` | ✅ **SnapshotEngine** — external or in-token, with a scheduler | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Dividend / coupon distribution | ❌ | ✅ `Debt` / `DebtEngine` variants | ✅ SnapshotEngine + `IncomeVault` (external) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Native yield (rebasing balances) | ❌ | ❌ | ❌ | ❌ | ✅ USDG multipliers | ❌ | ❌ | ❌ | ❌ |
-| ERC-4626 yield wrapper | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ `FrontierVault` | ❌ | ❌ |
-| Cross-chain mint/burn interface | ❌ | ✅ ERC-7802 (`CROSS_CHAIN_ROLE`) | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Chainlink CCIP compatibility | ❌ | ✅ `CCIPModule` (`getCCIPAdmin()`) | ✅ **CMTAT-CCIP** — scripts for BurnMint and LockRelease token pools, lane wiring, admin-role claim | ❌ | ⚠️ audited, not in repo | ❌ | ⚠️ announced migration | ❌ | ❌ |
-| LayerZero OFT adapter | ❌ | ✅ ERC-7802 variants | ✅ **CMTAT-LayerZero** `LayerZeroAdapterERC7802` (recommended) / `LayerZeroAdapter` (ERC-3643) | ❌ | ❌ | ❌ | ✅ `FrontierOFTAdapter*` | ❌ | ❌ |
-| Bridge mechanism | — | — | mint/burn via LayerZero; **either** mint/burn or lock/release via CCIP pools | CCTP mint/burn | — | — | **both**: lock/unlock on the hub, mint/burn on spokes | — | — |
-| Bridge-level pause | — | — | ✅ owner-gated `pause()` on each LayerZero adapter | ⚠️ token-level only | — | — | ⚠️ token-level only | — | — |
-| Bridge-level rate limit / allowlist | — | — | ✅ **CMTAT-CCIP** — per-lane CCIP pool rate limiters and allowlists | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Non-EVM implementation | ❌ | ✅ **CMTAT-Tezos-FA2** (SmartPy) and **private-CMTAT-aztec** (Noir) vendored here; **CMTAT-Solana** is a specification, not a program; Canton external | — | ❌ | ❌ | ❌ | ✅ Solana program in-repo | ❌ | ⚠️ separate codebases |
-| Confidential balances | ❌ | ✅ two routes: **CMTAT-Confidential** (Zama FHE, EVM) and **private-CMTAT-aztec** (Aztec L2, Noir; prototype) | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| On-chain legal documents | ❌ | ✅ ERC-1643 `DocumentERC1643Module` | — | ❌ | ❌ | ❌ | ⚠️ `contractUri` | ❌ | ❌ |
-| On-chain token metadata (ISIN, terms) | ❌ | ✅ `ExtraInformationModule` | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| On-chain holder registry | ❌ | ✅ `HolderList` variant | ⚠️ Rules whitelists approximate it | ❌ | ⚠️ payout groups | ❌ | ❌ | ❌ | ❌ |
-| Transfer fee | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (set to 0) |
-| Redemption modelled on-chain | ⚠️ burn | ⚠️ burn | ⚠️ `RuleConditionalTransferLight` can gate it | ⚠️ burn | ⚠️ burn | ⚠️ signature-gated burn | ⚠️ burn | ✅ redemption addresses | ⚠️ `redeem` |
+| Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| On-chain balance snapshots | ❌ no `setSnapshotEngine` | ✅ `Snapshot` variant / `setSnapshotEngine` | ✅ **SnapshotEngine** — external or in-token, with a scheduler | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Dividend / coupon distribution | ❌ | ✅ `Debt` / `DebtEngine` variants | ✅ SnapshotEngine + `IncomeVault` (external) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Native yield (rebasing balances) | ❌ | ❌ | ❌ | ❌ | ✅ USDG multipliers | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ERC-4626 yield wrapper | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ `FrontierVault` | ❌ | ❌ | ⚠️ wraps a reserve token, but not ERC-4626 |
+| Cross-chain mint/burn interface | ❌ | ✅ ERC-7802 (`CROSS_CHAIN_ROLE`) | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Chainlink CCIP compatibility | ❌ | ✅ `CCIPModule` (`getCCIPAdmin()`) | ✅ **CMTAT-CCIP** — scripts for BurnMint and LockRelease token pools, lane wiring, admin-role claim | ❌ | ⚠️ audited, not in repo | ❌ | ⚠️ announced migration | ❌ | ❌ | ❌ |
+| LayerZero OFT adapter | ❌ | ✅ ERC-7802 variants | ✅ **CMTAT-LayerZero** `LayerZeroAdapterERC7802` (recommended) / `LayerZeroAdapter` (ERC-3643) | ❌ | ❌ | ❌ | ✅ `FrontierOFTAdapter*` | ❌ | ❌ | ❌ |
+| Bridge mechanism | — | — | mint/burn via LayerZero; **either** mint/burn or lock/release via CCIP pools | CCTP mint/burn | — | — | **both**: lock/unlock on the hub, mint/burn on spokes | — | — | — |
+| Bridge-level pause | — | — | ✅ owner-gated `pause()` on each LayerZero adapter | ⚠️ token-level only | — | — | ⚠️ token-level only | — | — | — |
+| Bridge-level rate limit / allowlist | — | — | ✅ **CMTAT-CCIP** — per-lane CCIP pool rate limiters and allowlists | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Non-EVM implementation | ❌ | ✅ **CMTAT-Tezos-FA2** (SmartPy) and **private-CMTAT-aztec** (Noir) vendored here; **CMTAT-Solana** is a specification, not a program; Canton external | — | ❌ | ❌ | ❌ | ✅ Solana program in-repo | ❌ | ⚠️ separate codebases | ❌ |
+| Confidential balances | ❌ | ✅ two routes: **CMTAT-Confidential** (Zama FHE, EVM) and **private-CMTAT-aztec** (Aztec L2, Noir; prototype) | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| On-chain legal documents | ❌ | ✅ ERC-1643 `DocumentERC1643Module` | — | ❌ | ❌ | ❌ | ⚠️ `contractUri` | ❌ | ❌ | ❌ |
+| On-chain token metadata (ISIN, terms) | ❌ | ✅ `ExtraInformationModule` | — | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| On-chain holder registry | ❌ | ✅ `HolderList` variant | ⚠️ Rules whitelists approximate it | ❌ | ⚠️ payout groups | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Transfer fee | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (set to 0) | ❌ |
+| Redemption modelled on-chain | ⚠️ burn | ⚠️ burn | ⚠️ `RuleConditionalTransferLight` can gate it | ⚠️ burn | ⚠️ burn | ⚠️ signature-gated burn | ⚠️ burn | ✅ redemption addresses | ⚠️ `redeem` | ✅ `unwrap` returns the reserve token |
 
 **Reading.**
 
-* **Light is stripped of all of this, and for a plain fiat stablecoin that is the right call.** None of the six stablecoins has documents, snapshots or holder lists either.
-* **What Light also gives up, less obviously, is cross-chain.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the six stablecoins here are multi-chain (CoinVertible is the exception), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
+* **Light is stripped of all of this, and for a plain fiat stablecoin that is the right call.** None of the seven stablecoins has documents, snapshots or holder lists either.
+* **What Light also gives up, less obviously, is cross-chain.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the seven stablecoins here are multi-chain (CoinVertible and EURR are the exceptions), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
