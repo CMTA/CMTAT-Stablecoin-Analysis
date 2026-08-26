@@ -23,7 +23,7 @@ The central question this document answers: **for each feature a real stablecoin
 
 ---
 
-This document compares **CMTAT against the stablecoins**. For a stablecoin-to-stablecoin comparison that does not centre on CMTAT, see [`vendor/SUMMARY.md`](./vendor/SUMMARY.md).
+This document compares **CMTAT against the stablecoins**. For a stablecoin-to-stablecoin comparison that does not centre on CMTAT, see [`vendor-stablecoins/SUMMARY.md`](./vendor-stablecoins/SUMMARY.md).
 
 ## 1. Sources and versions
 
@@ -51,11 +51,11 @@ The CMTAT and RuleEngine pins are **release candidates**: their `version()` stri
 
 > **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)).
 
-CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
+CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor-stablecoins/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
 
 ### 1.2 Stablecoins analysed
 
-Everything under [`vendor/`](./vendor/): four upstream repositories pinned as submodules and two verified-source dumps taken from Etherscan.
+Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream repositories pinned as submodules and two verified-source dumps taken from Etherscan.
 
 | Issuer | Token(s) | Kind | Tag | Commit / address | Date | Solidity |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -66,7 +66,7 @@ Everything under [`vendor/`](./vendor/): four upstream repositories pinned as su
 | SG-FORGE | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
 | Tether | USDT | Etherscan dump | — | `0xdac17f95…` | dumped 2026-08-26 | 0.4.17 |
 
-The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor/README.md`](./vendor/README.md).
+The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md).
 
 > **Wyoming — `frontier-stable-token`.** The Commission announced a migration from LayerZero to **Chainlink CCIP** in August 2026 ([press release](https://www.prnewswire.com/news-releases/wyoming-stable-token-commission-migrates-to-chainlink-ccip-for-enhanced-operational-security-302854502.html)). This snapshot still reflects the LayerZero architecture, so every FRNT / wFRNT cross-chain statement below describes the OFT design, not the one now in production.
 
@@ -176,7 +176,7 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole Light feature set:
 
 **Reading.** Light gates minting on `MINTER_ROLE` and nothing else: no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
 
-The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls has to move to Standard or Permit and pay roughly 11 KiB of extra bytecode plus two external contracts.
+The companion projects answer this comprehensively: `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` goes further than anything in `vendor-stablecoins/` by tying issuance to an on-chain reserve attestation, which **none** of the six stablecoins does. But every one of those rules requires the RuleEngine, so **none of it is reachable from Light**. An issuer who wants USDC-grade minter controls has to move to Standard or Permit and pay roughly 11 KiB of extra bytecode plus two external contracts.
 
 Paxos's time-windowed rate limit does have an equivalent, but only through a third architecture: **CMTAT-ACE**'s `VolumeRatePolicy` caps how much an account can move within a rolling window, and attaching it to the `mint` selector reproduces `SupplyControl` + `RateLimit.sol`. That means a different token build (`ComplianceTokenCMTAT*`), not a contract bolted onto an existing deployment.
 
@@ -241,7 +241,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 | Version exposed on-chain | ✅ `version()` | ✅ | ✅ `VersionModule` everywhere | ❌ | ❌ | ⚠️ `CONTRACT_ID()` | ❌ | ✅ `version()` | ❌ |
 | Irreversible shutdown | ✅ `deactivateContract()` | ✅ | — | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` |
 
-**Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor/` has: **beacon-proxy fleet upgrades** (the natural fit for a multi-currency issuer — Monerium runs four tokens, Paxos four) and **CREATE2 deterministic addresses** (the same token address on every chain, which every cross-chain stablecoin here solves out-of-band).
+**Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor-stablecoins/` has: **beacon-proxy fleet upgrades** (the natural fit for a multi-currency issuer — Monerium runs four tokens, Paxos four) and **CREATE2 deterministic addresses** (the same token address on every chain, which every cross-chain stablecoin here solves out-of-band).
 
 Two concrete misses, both variant-independent:
 
@@ -312,7 +312,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 | **`forcedBurn` and `forcedTransfer` together** | Paxos, CoinVertible (freeze → wipe) | Both exist in the stack, but never in one deployment: `forcedBurn` is Light-only, `forcedTransfer` is every-variant-but-Light. The gap is the combination, not either function. |
 | **Timelock shipped with the token** | Paxos | No CMTA project ships one. OpenZeppelin's `TimelockController` drops in, so this is the cheapest of the gaps to close. |
 
-### 10.3 CMTAT features no stablecoin in `vendor/` has
+### 10.3 CMTAT features no stablecoin in `vendor-stablecoins/` has
 
 * **ERC-1404 restriction codes** and pre-trade `canTransfer` / `detectTransferRestriction` views — every stablecoin here simply reverts.
 * **Composable rule stacking** — Monerium and Wyoming each have *one* pluggable hook; RuleEngine runs an ordered list of them.
@@ -327,14 +327,14 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 * **A bridge that can be paused independently of the token** — CMTAT-LayerZero's adapters each carry their own owner-gated `pause()`. Wyoming's OFT adapters have no such switch; halting a bridge there means pausing the token.
 * **Bridge-agnostic cross-chain entry points** — ERC-7802 is a standard interface any bridge can drive; every stablecoin here is wired to one specific bridge (CCTP for Circle, LayerZero for Wyoming). CMTAT has working tooling for both LayerZero and CCIP.
 * **Compliance as runtime configuration** (CMTAT-ACE) — policies are attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook; no stablecoin here can reorder a policy chain without an upgrade.
-* **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor/`.
+* **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor-stablecoins/`.
 * **Mutable `name` / `symbol`** post-deployment.
 
 ### 10.4 Practical conclusion for a stablecoin issuer
 
 CMTAT's own documentation recommends the **Light** variant for stablecoins. That recommendation holds only for a specific shape of stablecoin.
 
-**Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model exactly and improves on it: five independently grantable roles instead of one `owner`, batch operations, pre-trade `canTransfer` views, permanent deactivation, mutable `name`/`symbol`, and, through CMTAT-Factory, beacon upgrades and CREATE2 addresses that no stablecoin in `vendor/` has. At 11.3 KiB it is also the smallest deployment in the set.
+**Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model exactly and improves on it: five independently grantable roles instead of one `owner`, batch operations, pre-trade `canTransfer` views, permanent deactivation, mutable `name`/`symbol`, and, through CMTAT-Factory, beacon upgrades and CREATE2 addresses that no stablecoin in `vendor-stablecoins/` has. At 11.3 KiB it is also the smallest deployment in the set.
 
 **Where Light falls short.** Four things the stablecoins here provide and Light does not:
 
@@ -353,8 +353,8 @@ CMTAT's own documentation recommends the **Light** variant for stablecoins. That
 
 ## See also
 
-* [`vendor/README.md`](./vendor/README.md) — per-directory guide to each stablecoin codebase and its main files.
-* [`vendor/SUMMARY.md`](./vendor/SUMMARY.md) — stablecoin-to-stablecoin comparison.
+* [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md) — per-directory guide to each stablecoin codebase and its main files.
+* [`vendor-stablecoins/SUMMARY.md`](./vendor-stablecoins/SUMMARY.md) — stablecoin-to-stablecoin comparison.
 * [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md) — 14 documented errors in CMTAT's own stablecoin comparison, with suggested fixes.
 * [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md) — CMTAT's Light-variant deployment guide.
 * [`cmtat/Rules/README.md`](./cmtat/Rules/README.md) — the rule catalogue and restriction codes.

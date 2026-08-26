@@ -22,8 +22,8 @@ Nothing here is compiled, deployed or tested — the deliverables are Markdown d
 
 ## Key concepts
 
-- **The deliverables are the four Markdown files.** Everything under `cmtat/` and `vendor/` is read-only evidence.
-- **Never edit anything inside `cmtat/` or `vendor/`** (except `vendor/README.md` and `vendor/SUMMARY.md`, which are ours). Those trees are submodules and upstream source dumps; a change there is either lost on the next `submodule update` or silently misrepresents the evidence.
+- **The deliverables are the four Markdown files.** Everything under `cmtat/` and `vendor-stablecoins/` is read-only evidence.
+- **Never edit anything inside `cmtat/` or `vendor-stablecoins/`** (except `vendor-stablecoins/README.md` and `vendor-stablecoins/SUMMARY.md`, which are ours). Those trees are submodules and upstream source dumps; a change there is either lost on the next `submodule update` or silently misrepresents the evidence.
 - **Every claim must be traced to the pinned source.** Upstream documentation is *not* an acceptable source — CMTAT's own `doc/technical/stablecoin.md` contains 14 verified errors, catalogued in `stablecoin-doc-issue.md`. When a document and the code disagree, the code wins and the discrepancy gets recorded.
 - **State non-verification explicitly.** Claims that could not be checked against the tree (contract sizes, tokens not vendored here such as Benji and BUIDL) belong in a "Not verified" section, never asserted inline.
 - **The three CMTAT columns.** Comparison tables split CMTAT into `Light` / `CMTAT` / `Companion` because the features are not co-located: `Light` is the stablecoin-oriented variant (`0_CMTATBaseCore`, 11.3 KiB); `CMTAT` is any heavier variant; `Companion` is a separate CMTA project extending the token (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory, CMTAT-LayerZero, CMTAT-ACE, CMTAT-CCIP).
@@ -36,7 +36,7 @@ Nothing here is compiled, deployed or tested — the deliverables are Markdown d
 ```
 README.md                     the main deliverable: CMTAT vs 6 stablecoins, 10 sections, 6 comparison tables
 stablecoin-doc-issue.md       14 documented errors in CMTAT's own doc/technical/stablecoin.md, with suggested fixes
-vendor/
+vendor-stablecoins/
 ├── README.md                 per-directory guide to each vendored stablecoin and its main files
 ├── SUMMARY.md                stablecoin-to-stablecoin comparison (no CMTAT focus)
 ├── stablecoin-evm/           [submodule] Circle — USDC, EURC (Solidity 0.6.12, transparent proxy)
@@ -73,9 +73,9 @@ Versions above are the pins recorded in the index; `git submodule status` is aut
 ## Common commands
 
 ```bash
-git submodule update --init --recursive          # populate cmtat/ and vendor/ (required before any analysis)
+git submodule update --init --recursive          # populate cmtat/ and vendor-stablecoins/ (required before any analysis)
 git submodule status                             # authoritative version pins for README.md section 2
-git -C vendor/<name> log -1 --format='%h %ad'    # date a specific vendored source
+git -C vendor-stablecoins/<name> log -1 --format='%h %ad'    # date a specific vendored source
 ```
 
 Verification helpers used while editing the deliverables:
@@ -103,6 +103,6 @@ python3 ~/.claude/skills/check-markdown-linebreaks/check_linebreaks.py CLAUDE.md
 - **Column order is fixed** across all six comparison tables: `Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT`. Adding a token means updating all six.
 - **Name the contract, not just the project.** A `Companion` cell says `Rules RuleMintAllowance`, not "the Rules library".
 - **Cite paths as `file_path:line_number`** when pointing at evidence, so the reference stays clickable and checkable.
-- **Markdown prose is never hard-wrapped** — one line per bullet or paragraph, everywhere: `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md` and all four deliverables (`README.md`, `stablecoin-doc-issue.md`, `vendor/README.md`, `vendor/SUMMARY.md`). A hard wrap always breaks mid-sentence somewhere, and no column width avoids it. Verify with `python3 ~/.claude/skills/check-markdown-linebreaks/check_linebreaks.py --expect=one-line-per-block <files>`; reflow a file with `--unwrap` and commit that on its own, never mixed with substantive edits.
+- **Markdown prose is never hard-wrapped** — one line per bullet or paragraph, everywhere: `CLAUDE.md`, `AGENTS.md`, `CHANGELOG.md` and all four deliverables (`README.md`, `stablecoin-doc-issue.md`, `vendor-stablecoins/README.md`, `vendor-stablecoins/SUMMARY.md`). A hard wrap always breaks mid-sentence somewhere, and no column width avoids it. Verify with `python3 ~/.claude/skills/check-markdown-linebreaks/check_linebreaks.py --expect=one-line-per-block <files>`; reflow a file with `--unwrap` and commit that on its own, never mixed with substantive edits.
 - **Corrections to upstream documentation go in `stablecoin-doc-issue.md`**, one numbered section each, with location, quoted claim, code evidence and a suggested fix — not scattered through `README.md`.
 - **No build, test or lint step exists at the root.** If a claim needs compiling to verify, say so and mark it unverified rather than adding tooling to this repository.

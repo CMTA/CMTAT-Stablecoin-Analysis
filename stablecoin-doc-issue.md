@@ -6,8 +6,8 @@ Errors and inaccuracies found in the "Comparison with USDC and USDT" section of 
 
 | Token | Source checked | Version |
 | --- | --- | --- |
-| USDC | [`vendor/stablecoin-evm/`](./vendor/stablecoin-evm/) (`circlefin/stablecoin-evm`) | `fc85788`, 2026-08-12 |
-| USDT | [`vendor/usdt_eth_0xdac17f95…/TetherToken.sol`](./vendor/) (Etherscan, `0xdac17f95…`) | deployed bytecode source |
+| USDC | [`vendor-stablecoins/stablecoin-evm/`](./vendor-stablecoins/stablecoin-evm/) (`circlefin/stablecoin-evm`) | `fc85788`, 2026-08-12 |
+| USDT | [`vendor-stablecoins/usdt_eth_0xdac17f95…/TetherToken.sol`](./vendor-stablecoins/) (Etherscan, `0xdac17f95…`) | deployed bytecode source |
 | CMTAT | [`cmtat/CMTAT/`](./cmtat/CMTAT/) | `v3.3.0-rc3`, `658672f` |
 | Rules / RuleEngine | [`cmtat/Rules/`](./cmtat/Rules/), [`cmtat/RuleEngine/`](./cmtat/RuleEngine/) | `v0.6.0` / `v3.0.0-rc6` |
 
@@ -66,7 +66,7 @@ CMTAT's *other* comparison table — "CMTAT for tokenized market funds", at [`do
 - **Forced transfer** (`instantTransfer`) — available in CMTAT Standard and Permit via `forcedTransfer`.
 ```
 
-**Finding** — No such function exists anywhere in `vendor/stablecoin-evm`. **USDC has no forced-transfer and no seizure capability of any kind.** Blacklisting via `Blacklistable.blacklist()` freezes an address permanently, but nothing in `contracts/v1`, `contracts/v1.1` or `contracts/v2` can move or destroy a holder's balance. The only value-recovery function is `Rescuable.rescueERC20`, which pulls *foreign* ERC-20 tokens off the token contract and cannot touch USDC balances.
+**Finding** — No such function exists anywhere in `vendor-stablecoins/stablecoin-evm`. **USDC has no forced-transfer and no seizure capability of any kind.** Blacklisting via `Blacklistable.blacklist()` freezes an address permanently, but nothing in `contracts/v1`, `contracts/v1.1` or `contracts/v2` can move or destroy a holder's balance. The only value-recovery function is `Rescuable.rescueERC20`, which pulls *foreign* ERC-20 tokens off the token contract and cannot touch USDC balances.
 
 **Suggested fix** — set the USDC cell to `—`, and move the line at 383 out of "Features USDC has that CMTAT Light lacks" into "Features CMTAT has that USDC lacks".
 
@@ -138,7 +138,7 @@ New supply is always credited to `owner`; distribution is a subsequent ordinary 
 | Mint with dedicated allowance (`mintFrom`) | ✓ | — | — | — | — |
 ```
 
-**Finding** — There is no `mintFrom` in `vendor/stablecoin-evm`. USDC's mechanism is `configureMinter(minter, minterAllowedAmount)` called by the `masterMinter`, followed by `mint(to, amount)` from the minter, with `minterAllowed[msg.sender]` decremented on each call. The ✓ is correct in substance; only the function name is wrong.
+**Finding** — There is no `mintFrom` in `vendor-stablecoins/stablecoin-evm`. USDC's mechanism is `configureMinter(minter, minterAllowedAmount)` called by the `masterMinter`, followed by `mint(to, amount)` from the minter, with `minterAllowed[msg.sender]` decremented on each call. The ✓ is correct in substance; only the function name is wrong.
 
 **Suggested fix** — relabel the row "Mint with dedicated allowance (`minterAllowance`)". See also issue 8 — the CMTAT cells on this row should not all be `—`.
 
@@ -325,5 +325,5 @@ Recorded so a fix does not disturb them:
 ## See also
 
 * [`README.md`](./README.md) — the full CMTAT ⇄ stablecoin comparison these corrections feed into, with a dedicated column for the Light variant.
-* [`vendor/README.md`](./vendor/README.md) — the vendored sources and their main files.
-* [`vendor/SUMMARY.md`](./vendor/SUMMARY.md) — stablecoin-to-stablecoin comparison.
+* [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md) — the vendored sources and their main files.
+* [`vendor-stablecoins/SUMMARY.md`](./vendor-stablecoins/SUMMARY.md) — stablecoin-to-stablecoin comparison.
