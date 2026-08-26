@@ -49,7 +49,7 @@ The CMTAT and RuleEngine pins are **release candidates**: their `version()` stri
 
 > **Chainlink's ACE policy library is not vendored here.** `CMTAT-ACE` ships its own extractors, `TransferValidationPolicy` and token builds, all read for this comparison, but the policies it attaches (`VolumeRatePolicy`, `SecureMintPolicy`, `PausePolicy`, …) come from the `@chainlink/ace` npm package, which is not installed in this tree. Claims about those policies are reproduced from [`cmtat/CMTAT-ACE/README.md`](./cmtat/CMTAT-ACE/README.md), not verified against their source. `CMTAT-ACE` also states it has had **no formal audit**, static analysis and AI review only, and `CMTAT-CCIP` is unaudited testnet tooling.
 
-> **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)). This is the only stablecoin deployment of CMTAT named in [`cmtat/CMTAT/README.md`](./cmtat/CMTAT/README.md); it is reported there, not verified on-chain here, and the version predates the v3.3.0 compared below.
+> **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)).
 
 CMTAT ships its own stablecoin comparison at [`cmtat/CMTAT/doc/technical/stablecoin.md`](./cmtat/CMTAT/doc/technical/stablecoin.md). It was used as a starting point, but **fourteen of its claims about USDC and USDT do not match the code in `vendor/`**, and those are catalogued, with evidence and suggested fixes, in [`stablecoin-doc-issue.md`](./stablecoin-doc-issue.md).
 
@@ -216,14 +216,14 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Model | OZ `AccessControl`, **5 roles** | OZ `AccessControl`, ~15 roles | RBAC **or** `Ownable` **or** `Ownable2Step` flavours for RuleEngine, every rule, SnapshotEngine, Factory | 5 bespoke singletons | OZ `AccessControlDefaultAdminRules` | `Ownable2Step` + admin/system | OZ `AccessControl`, 8 roles | 3 bespoke operators | single `owner` |
+| Model | OZ `AccessControl`, **5 roles** | OZ `AccessControl`, ~15 roles | RBAC, `Ownable` or `Ownable2Step` flavours (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory); `Ownable` only for LayerZero and ACE | 5 bespoke singletons | OZ `AccessControlDefaultAdminRules` | `Ownable2Step` + admin/system | OZ `AccessControl`, 8 roles | 3 bespoke operators | single `owner` |
 | Roles | `DEFAULT_ADMIN`, `MINTER`, `BURNER`, `PAUSER`, `ENFORCER` | + `ERC20ENFORCER`, `ALLOWLIST`, `CROSS_CHAIN`, `SNAPSHOOTER`, `DOCUMENT`, `EXTRA_INFORMATION`, `DEBT`, `PROXY_UPGRADE`, … | separate managers per concern (`onlyRulesManager`, `onlyComplianceManager`, `onlySanctionListManager`) | owner, masterMinter, pauser, blacklister, rescuer | ✅ granular | 3 tiers | ✅ granular | registrar, operations, technical | — |
 | Each role grantable to several addresses | ✅ | ✅ | ✅ | ❌ one address each | ✅ | ⚠️ system/admin are sets | ✅ | ❌ immutable | ❌ |
-| Two-step role handover | ❌ OZ immediate | ❌ OZ immediate | ✅ `Ownable2Step` flavours throughout | ❌ | ✅ delayed admin transfer | ✅ | ⚠️ OZ | ✅ `accept*Role` | ❌ |
+| Two-step role handover | ❌ OZ immediate | ❌ OZ immediate | ✅ `Ownable2Step` flavours of RuleEngine, every rule, SnapshotEngine and the factories; ❌ LayerZero and ACE | ❌ | ✅ delayed admin transfer | ✅ | ⚠️ OZ | ✅ `accept*Role` | ❌ |
 | Timelock shipped in-repo | ❌ | ❌ | ❌ | ❌ | ✅ `timelock-controller/` | ❌ | ❌ | ❌ | ❌ |
 | Roles annotated with fund-redirection risk | ⚠️ `access-control.md` | ⚠️ `access-control.md` | — | ❌ | ✅ `Roles.sol` | ⚠️ `tokendesign.md` | ⚠️ README | ❌ | ❌ |
 
-**Reading.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`. The gap is governance *tooling*: **Paxos is the only project that ships a `TimelockController` with the token** and annotates which roles can redirect funds. CMTAT's `Ownable2Step` safety exists only on the companion contracts, so it is unavailable to a Light deployment, where `DEFAULT_ADMIN_ROLE` transfers take effect immediately.
+**Reading.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`. The gap is governance *tooling*: **Paxos is the only project that ships a `TimelockController` with the token** and annotates which roles can redirect funds. CMTAT's `Ownable2Step` safety exists only on four of the companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory), never on the token itself, so it is unavailable to any deployment: `DEFAULT_ADMIN_ROLE` transfers take effect immediately. CMTAT-LayerZero's adapters use plain `Ownable`, and CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
 
 ## 8. Upgradeability & lifecycle
 
