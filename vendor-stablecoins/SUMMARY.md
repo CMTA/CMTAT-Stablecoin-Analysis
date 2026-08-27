@@ -14,7 +14,7 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Directory | `../cmtat/CMTAT` | `stablecoin-evm` | `paxos-token-contracts` | `monerium-smart-contracts` | `frontier-stable-token` | `cv_eth_0xf4ccc80c…` | `usdt_eth_0xdac17f95…` |
 | Solidity | 0.8.x | **0.6.12** | 0.8.28 | 0.8.x | 0.8.22 | 0.8.22 | **0.4.17** |
-| Base library | OpenZeppelin 5.x | bespoke | OZ 5.x (upgradeable) | OZ 4.9.x (upgradeable) | OZ upgradeable + Fireblocks ERC-20F | OZ 4.x (upgradeable) | none (inlined) |
+| Base library | OpenZeppelin 5.x | bespoke | OZ 5.x (upgradeable) | OZ 5.0.0 (upgradeable) | OZ upgradeable + Fireblocks ERC-20F | OZ 4.x (upgradeable) | none (inlined) |
 | Upgrade pattern | proxy-agnostic (UUPS via factory) | transparent admin proxy | UUPS + legacy admin proxy | UUPS (ERC-1967) | UUPS | UUPS, 2-step authorization | ❌ — `deprecate()` call forwarding |
 | Access control | OZ `AccessControl` + roles | 5 bespoke singleton roles | OZ `AccessControlDefaultAdminRules` | `Ownable2Step` + admin/system tiers | OZ `AccessControl`, 8 roles | 3 bespoke operators, 2-step accept | single `owner` |
 | Decimals | configurable | 6 | 6 (18 for PAXG) | 18 | 6 | 18 | 6 |
@@ -28,11 +28,11 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 | Feature | CMTAT | Circle | Paxos | Monerium | Wyoming | CoinVertible | USDT |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Standard ERC-20 return values | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ (no `return`) |
-| EIP-2612 `permit` | ✅ (`ERC2612Module`) | ✅ (V2+) | ✅ | ✅ | ✅ | ❌ | ❌ |
+| EIP-2612 `permit` | ⚠️ `Permit` deployment version only (`6_CMTATBaseERC2612`) | ✅ (V2+) | ✅ | ✅ | ✅ | ❌ | ❌ |
 | EIP-3009 `transferWithAuthorization` | ❌ | ✅ (V2+) | ✅ + batch | ❌ | ❌ | ❌ | ❌ |
 | ERC-1271 (smart-account signatures) | ✅ | ✅ (`SignatureChecker`) | ✅ | ✅ | ⚠️ via OZ | ❌ | ❌ |
 | Batch transfer | ✅ (`batchTransfer`) | ⚠️ `FiatTokenUtil` helper (3009 only) | ✅ `transferFromBatch` | ❌ | ⚠️ `Multicall` | ❌ | ❌ |
-| `increase/decreaseAllowance` | ✅ | ✅ | ✅ | ⚠️ OZ 4.9 | ⚠️ OZ | ✅ | ❌ |
+| `increase/decreaseAllowance` | ❌ removed in OZ 5 | ✅ (V2+) | ❌ removed in OZ 5 | ❌ removed in OZ 5 | ✅ `ERC20F` | ✅ | ❌ |
 | Transfer-with-callback | ✅ ERC-1363 | ❌ | ❌ | ⚠️ ERC-677 via controller shim | ❌ | ❌ | ❌ |
 | Meta-transactions | ✅ ERC-2771 | ❌ | ⚠️ covered by 3009 | ❌ | ❌ | ❌ | ❌ |
 
@@ -42,6 +42,7 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 * Circle's EIP-712 domain separator is recomputed from the live `chainid()` since **V2.2**, which makes the permits fork-safe; earlier versions cached it at initialization.
 * Paxos exposes the largest gasless surface: `permit` (typed **and** raw-bytes signature), `transferWithAuthorization`, `receiveWithAuthorization`, their batch variants, and a `cancelPermits(count)` nonce-bumping escape hatch.
 * CoinVertible has neither permit nor 3009 — every movement is an on-chain call from the holder.
+* `increaseAllowance` / `decreaseAllowance` are **not** an ERC-20 requirement and were dropped from OpenZeppelin in v5. CMTAT, Paxos and Monerium are all on OZ 5 and define no replacement, so they no longer expose them; Circle (bespoke), Wyoming (Fireblocks `ERC20F`) and CoinVertible (OZ 4) still do.
 
 ---
 
@@ -52,7 +53,7 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 | Who may mint | `MINTER_ROLE` | any configured *minter* | `SUPPLY_CONTROLLER_ROLE` (external contract) | `system` accounts | `MINTER_ROLE` (+ `ADAPTER_ROLE`) | `registrar` only | `owner` only |
 | Per-minter allowance | ❌ (role only) | ✅ `minterAllowance` | ✅ optional + **rate limit** | ✅ + global cap | ❌ | ❌ | ❌ |
 | Minter management delegated off-token | ❌ | ✅ `MasterMinter` / `MintController` | ✅ `SupplyControl` contract | ❌ (in-token) | ❌ | ❌ | ❌ |
-| Burn from arbitrary holder | ✅ `forcedBurn` (enforcement) | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `burn(from,…)` **with holder signature** | ✅ `BURNER_ROLE` | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` |
+| Burn from arbitrary holder | ⚠️ `forcedBurn` (Light only, address must be frozen) or `forcedTransfer(from, address(0), …)` (every other variant) | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `burn(from,…)` **with holder signature** | ❌ `burn(uint256)` is self-burn only | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` |
 | Batch mint | ✅ `batchMint` / `batchBurn` | ❌ | ⚠️ facet-level | ⚠️ `BatchMint` migration helper | ⚠️ `Multicall` | ❌ | ❌ |
 | Mint/burn while paused | configurable | ❌ | ✅ (documented, by design) | n/a (no pause) | ❌ | ❌ | ❌ |
 
@@ -73,10 +74,10 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 | Allow-list | ✅ `AllowlistModule` | ❌ | ❌ | ⚠️ possible via custom validator | ⚠️ registry is pluggable | ❌ | ❌ |
 | List shared across tokens | ✅ (RuleEngine) | ❌ | ❌ | ✅ (one validator, 4 tokens) | ✅ (`DenyList` per mesh) | ❌ | ⚠️ getters exposed for successors |
 | Pluggable transfer rules | ✅ **RuleEngine / ERC-1404** | ❌ | ❌ | ✅ `IValidator` hook | ✅ `IAccessRegistry` hook | ❌ | ❌ |
-| Sanctions-oracle integration | via a Rule | ❌ | ❌ | ❌ | ✅ Chainalysis (via registry) | ❌ | ❌ |
+| Sanctions-oracle integration | via a Rule | ❌ | ❌ | ❌ | ⚠️ not verified — registry not vendored | ❌ | ❌ |
 | Freeze part of a balance | ✅ `freezePartialTokens` (partial freeze) | ❌ | ⚠️ whole address | ❌ | ❌ | ⚠️ whole address | ⚠️ whole address |
-| Forced transfer | ✅ `forcedTransfer` | ❌ | ⚠️ wipe + re-mint | ✅ `recover` (signature-gated) | ❌ | ❌ | ❌ |
-| Seize / destroy funds | ✅ `forcedBurn` | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `recover` only | ❌ | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` |
+| Forced transfer | ✅ `forcedTransfer` (every variant except Light) | ❌ | ⚠️ wipe + re-mint | ✅ `recover` (signature-gated) | ❌ | ❌ | ❌ |
+| Seize / destroy funds | ✅ `forcedBurn` (Light) or `forcedTransfer` to `address(0)` (other variants) | ❌ | ✅ `wipeFrozenAddress` | ⚠️ `recover` only | ❌ | ✅ `wipeFrozenAddress` | ✅ `destroyBlackFunds` |
 | Pause | ✅ `PauseModule` | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | Permanent deactivation | ✅ `deactivateContract()` | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ `deprecate()` |
 | Standardised enforcement events | ✅ ERC-7551 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -84,6 +85,7 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 **Notes**
 
 * The compliance list sits in one of two places. **In-token lists** (Circle, Paxos, CoinVertible, USDT) keep the check in the token's own storage — cheap and simple, but each token carries its own list and any policy change needs an implementation upgrade. **Externalised hooks** (CMTAT's RuleEngine, Monerium's `IValidator`, Wyoming's `IAccessRegistry`) call out to a swappable contract on every transfer — one policy can serve many tokens and can be replaced without touching the token. CMTAT is the most general of the three: a RuleEngine can chain arbitrary rules and returns ERC-1404 restriction codes.
+* **Wyoming's sanctions screening could not be verified here.** Only `IAccessRegistry` and a test mock are vendored; the `FrontierAccessRegistry` implementation is not. The Chainalysis delegation appears solely in Wyoming's own `README.md`, which hedges it ("**may** delegate additional checks"), so it is recorded as unverified rather than asserted.
 * **Monerium has no pause function at all.** Emergency response relies on the shared `BlacklistValidatorUpgradeable`, or on a UUPS upgrade.
 * **CoinVertible's pause is total** in the deployed code: `mint`, `burn`, `transfer`, `transferFrom` and `approve` all carry `onlyWhenNotPaused`. The `IAccessControl` NatSpec claims registrar `mint`/`burn` remain available while paused — the implementation does not match that comment.
 * **Wyoming** deliberately lets a *cross-chain* delivery land in a frozen wallet (`mintToFrozenWallet` / `transferToFrozenWallet`) so the destination transaction cannot revert; the tokens remain immovable afterwards. It is the only design here that treats "don't strand a LayerZero message" as more important than "never credit a denied wallet".
@@ -98,10 +100,10 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 | Pattern | UUPS (via `CMTAT-Factory`) or immutable | transparent proxy | UUPS / admin proxy | UUPS | UUPS | UUPS | none |
 | Who may upgrade | `DEFAULT_ADMIN_ROLE` | proxy `admin` | `DEFAULT_ADMIN_ROLE` (+ timelock) | `owner` (2-step) | `UPGRADER_ROLE` | `technical`, after registrar/operations **authorization** | n/a |
 | Two-step upgrade | ❌ | ❌ | ⚠️ via `TimelockController` | ❌ | ❌ | ✅ `authorizeImplementation` then `upgradeTo` | n/a |
-| Two-step role handover | ⚠️ OZ AccessControl | ❌ | ✅ `DefaultAdminRules` (delayed) | ✅ `Ownable2Step` | ⚠️ OZ | ✅ `accept*Role` per operator | ❌ |
+| Two-step role handover | ❌ OZ `AccessControl`, immediate | ❌ | ✅ `DefaultAdminRules` (delayed) | ✅ `Ownable2Step` | ⚠️ OZ | ✅ `accept*Role` per operator | ❌ |
 | Timelock in-repo | ❌ | ❌ | ✅ `timelock-controller/` | ❌ | ❌ | ❌ | ❌ |
-| Rescue foreign tokens | ⚠️ | ✅ `rescueERC20` (`rescuer` role) | ✅ `reclaimToken` | ❌ | ✅ `salvageERC20` + `salvageGas` | ❌ | ❌ |
-| Explicit storage-layout contract | ⚠️ ERC-7201 namespaces | ❌ (inheritance order) | ✅ `BaseStorageV3` | ⚠️ ERC-7201 namespaces | ⚠️ OZ namespaces | ✅ `*DataLayout.sol` | n/a |
+| Rescue foreign tokens | ❌ | ✅ `rescueERC20` (`rescuer` role) | ✅ `reclaimToken` | ❌ | ✅ `salvageERC20` + `salvageGas` | ❌ | ❌ |
+| Explicit storage-layout contract | ⚠️ ERC-7201 namespaces | ❌ (inheritance order) | ✅ `BaseStorageV3` | ⚠️ OZ 5 base only; `validator` is a plain slot | ⚠️ OZ namespaces | ✅ `*DataLayout.sol` | n/a |
 | Public audits in repo | ✅ (upstream) | ⚠️ external | ✅ 7 PDFs (Halborn, Zellic, ToB) | ✅ 3 PDFs (Ackee) | ❌ | ❌ | ❌ |
 
 **Notes**
@@ -138,8 +140,8 @@ Legend: ✅ present · ❌ absent · ⚠️ present but partial / indirect / non
 
 CMTAT is a **framework**, not a single token, and that shows in the comparison:
 
-* **Broader compliance toolkit than any of the fiat stablecoins.** Only CMTAT offers an allow-list, ERC-1404 restriction codes, partial-balance freezing, standardised ERC-7551 enforcement events, on-chain legal documents (ERC-1643), snapshots and an on-chain holder list. Those come from its securities/tokenisation heritage — Circle, Paxos and Tether only ever need "is this address denied?".
-* **Comparable or stronger enforcement primitives.** `forcedTransfer` + `forcedBurn` + `deactivateContract()` cover everything Paxos, CoinVertible and USDT can do, with explicit events; Circle and Wyoming have no seizure at all.
+* **Broader compliance toolkit than any of the fiat stablecoins.** ERC-1404 restriction codes, partial-balance freezing, standardised ERC-7551 enforcement events, on-chain legal documents (ERC-1643), snapshots and an on-chain holder list are CMTAT's alone. An allow-list is the one item others could match: Monerium's `IValidator` and Wyoming's `IAccessRegistry` are pluggable enough to hold one, but neither ships an allow-list implementation. Those come from its securities/tokenisation heritage — Circle, Paxos and Tether only ever need "is this address denied?".
+* **Comparable or stronger enforcement primitives.** `forcedTransfer` — which burns when the destination is `address(0)` — plus `deactivateContract()` cover everything Paxos, CoinVertible and USDT can do, with explicit events; Circle and Wyoming have no seizure at all. Light is the exception inside CMTAT: it gets `forcedBurn` instead, cannot move a position elsewhere, and can only act on an address already frozen.
 * **Weaker on issuance controls.** CMTAT gates minting on a role, full stop. Circle's per-minter allowances, Paxos's rate-limited external `SupplyControl` and Monerium's capped mint allowances all bound the blast radius of a compromised minter key in a way a plain role does not. This is the clearest gap if CMTAT is used as a fiat-backed stablecoin.
 * **No EIP-3009.** Circle and Paxos both ship it; several payment integrations expect `transferWithAuthorization` on a USD stablecoin. CMTAT covers gasless approvals with EIP-2612 and gasless calls with ERC-2771 instead.
 * **Modularity where the others hardcode.** The RuleEngine/SnapshotEngine/DebtEngine split is the same instinct as Monerium's `IValidator` and Wyoming's `IAccessRegistry`, taken further — CMTAT can swap policy without an upgrade, which the in-token-blacklist designs cannot.
