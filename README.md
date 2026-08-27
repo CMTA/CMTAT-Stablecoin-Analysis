@@ -319,7 +319,9 @@ Deployment patterns, upgrade authority and end-of-life. Light keeps almost every
 
 **Reading.** Light keeps almost every row here, and CMTAT-Factory is the one companion it can use. The factory gives even a Light deployment two things no stablecoin in `vendor-stablecoins/` has:
 
-* **beacon-proxy fleet upgrades** — the natural fit for a multi-currency issuer; Monerium runs four tokens, Paxos four;
+* **beacon-proxy fleet upgrades** — one beacon holds one implementation for many proxies, so a single upgrade moves the whole fleet. The saving depends on running several tokens *and* on their being able to share one implementation, and the two multi-token issuers here fall on opposite sides of that:
+  * **Monerium qualifies.** There is a single [`src/Token.sol`](./vendor-stablecoins/monerium-smart-contracts/src/Token.sol), and identity arrives as initializer arguments (`initialize(string name, string symbol, address _validator)`), so EURe, GBPe, USDe and ISKe are four proxies over identical bytecode. It runs them on UUPS instead, upgrading each separately.
+  * **Paxos does not.** Its four tokens compile to four distinct implementations: `USDP`, `PYUSD` and `PAXG` share the `PaxosTokenV2` base but hardcode identity as overrides (`USDP.name()` returns `"Pax Dollar"`, `PAXG.name()` returns `"Paxos Gold"`), and `USDG` extends `PaxosTokenClaimableRewards` with UUPS — a different base carrying rebasing logic the others must not have. A beacon over that fleet would force gold and a yield-bearing dollar onto one implementation, so the pattern is unusable here without first moving name, symbol and decimals into storage.
 * **CREATE2 deterministic addresses** — the same token address on every chain, which every cross-chain stablecoin here solves out-of-band.
 
 Two concrete misses, both variant-independent:
