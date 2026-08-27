@@ -76,7 +76,7 @@ Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream r
 | Issuer | Token(s) | Kind | Tag | Commit / address | Date | Solidity |
 | --- | --- | --- | --- | --- | --- | --- |
 | [Circle](https://www.circle.com/usdc) | USDC, EURC | submodule | `release-2026-08-12T202509` | `fc85788` | 2026-08-12 | 0.6.12 |
-| [Paxos](https://www.paxos.com/) | USDP, USDG, PYUSD, PAXG | submodule | `v2.1.0`+3 | `674ac10` | 2026-07-29 | 0.8.28 |
+| [Paxos](https://www.paxos.com/) | [USDP](https://www.paxos.com/usdp), [USDG](https://globaldollar.com/about-usdg), [PYUSD](https://www.paxos.com/pyusd), [PAXG](https://www.paxos.com/pax-gold) | submodule | `v2.1.0`+3 | `674ac10` | 2026-07-29 | 0.8.28 |
 | [Monerium](https://monerium.com/) | EURe, GBPe, USDe, ISKe | submodule | `v2.0.0`+24 | `514bee7` | 2025-08-21 | 0.8.x |
 | [Wyoming](https://stabletoken.wyo.gov/) | FRNT, wFRNT | submodule | *(untagged)* | `f8aa140` | 2026-04-30 | 0.8.22 |
 | [SG-FORGE](https://www.sgforge.com/product/coinvertible/) | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
