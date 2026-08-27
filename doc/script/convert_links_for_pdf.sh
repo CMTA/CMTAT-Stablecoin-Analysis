@@ -13,16 +13,17 @@ if [ -z "$1" ]; then
     echo "The output defaults to README_UPDATE.md beside the input file, so the"
     echo "image links it keeps relative still resolve."
     echo ""
+    echo "Run from doc/script/. The input defaults to the repository root README.md."
+    echo ""
     echo "Example:"
-    echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0"
-    echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0/doc"
-    echo "  $0 https://github.com/CMTA/CMTAT/blob/v3.0.0 ../README.md README_UPDATE.md"
+    echo "  $0 https://github.com/CMTA/CMTAT-Stablecoin-Analysis/blob/v0.1.0"
+    echo "  $0 https://github.com/CMTA/CMTAT-Stablecoin-Analysis/blob/v0.1.0 ../../README.md README_UPDATE.md"
     exit 1
 fi
 
 GITHUB_LINK="${1%/}"  # Remove trailing slash if present
 
-INPUT_FILE="${2:-../README.md}"   # doc/README.md, the full reference (the root README is a short summary)
+INPUT_FILE="${2:-../../README.md}"   # the repository root README.md, this project's deliverable
 
 if [ ! -f "$INPUT_FILE" ]; then
     echo "Error: Input file '$INPUT_FILE' not found"
