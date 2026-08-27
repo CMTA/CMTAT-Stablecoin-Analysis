@@ -265,7 +265,12 @@ More complex functionality such as shared blacklists, sanctions oracles, whiteli
 
 **Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. Those are the minimal features generally found in all stablecoins.
 
-Everything beyond that lives in `Rules`: shared blacklists, sanctions screening, whitelists, balance caps, per-transfer approval, identity binding. **All of it requires leaving Light.** Once you do, the model differs from every stablecoin here: Monerium and Wyoming each have *one* pluggable hook, while the RuleEngine runs an ordered, composable stack of them.
+Everything beyond that lives in `Rules`: shared blacklists, sanctions screening, whitelists, balance caps, per-transfer approval, identity binding. **All of it requires leaving Light.** Once you do, the evaluation model differs from every stablecoin here:
+
+* **The RuleEngine evaluates an ordered list.** `_detectTransferRestriction` walks the rules by index and returns the first non-zero ERC-1404 code, or `TRANSFER_OK` when all of them pass ([`RuleEngineBase.sol:166`](./cmtat/RuleEngine/src/RuleEngineBase.sol#L166)). Rules of different kinds therefore compose, and their order decides which reason a rejected transfer reports.
+* **Monerium and Wyoming each have exactly one hook**, swappable but not stackable: Monerium's `IValidator`, repointed with `setValidator` ([`Token.sol:111`](./vendor-stablecoins/monerium-smart-contracts/src/Token.sol#L111)), and Wyoming's `accessRegistry.hasAccess(account, sender, msgData)` ([`FrontierERC20F.sol:67`](./vendor-stablecoins/frontier-stable-token/contracts/FrontierERC20F.sol#L67)). A second kind of check means writing it into the one contract the hook points at.
+* **EURR is the closest, and still not the same.** Its registry is `immutable`, so the contract itself cannot be swapped — only the policy id the token queries. Its `parentPolicyId` chain composes hierarchically, but the links must share a type and `isAuthorized` resolves a single membership question through them; it is a fallback lookup, not several kinds of check evaluated in turn.
+
 
 **CMTAT has three compliance architectures.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes:
 
