@@ -2,11 +2,13 @@
 
 **Version 0.1.0**
 
-**CMTA** ([Capital Markets and Technology Association](https://www.cmta.ch/)) is a Swiss non-profit that publishes standards for tokenising financial instruments. **CMTAT** (CMTA Token) is its open-source, blockchain-agnostic **security-token framework**: an ERC-20 extended with the controls a regulated instrument needs — global pause, permanent deactivation, account and partial-balance freeze, controlled mint/burn, forced transfer, pluggable transfer validation, on-chain legal documents and optional cross-chain entry points. The [Solidity reference implementation](https://github.com/CMTA/CMTAT) read here is modular: 25 modules assembled into 21 deployment variants, standalone or upgradeable, plus seven companion projects that extend the token from outside.
+**CMTA** ([Capital Markets and Technology Association](https://www.cmta.ch/)) is a Swiss non-profit that publishes standards for tokenising financial instruments. 
+
+**CMTAT** (CMTA Token) is its open-source, blockchain-agnostic **security-token framework**: an ERC-20 extended with the controls a regulated instrument needs — global pause, permanent deactivation, account and partial-balance freeze, controlled mint/burn, forced transfer, pluggable transfer validation, on-chain legal documents and optional cross-chain entry points. The [Solidity reference implementation](https://github.com/CMTA/CMTAT) read here is modular: 25 modules assembled into 21 deployment variants, standalone or upgradeable, plus seven companion projects that extend the token from outside.
 
 Feature-by-feature comparison between **CMTAT** and seven production stablecoin codebases whose source is vendored in this repository: Circle (**USDC**, **EURC**), Paxos (**USDP**, **USDG**, **PYUSD**, **PAXG**), Monerium (**EURe**, **GBPe**, **USDe**, **ISKe**), the Wyoming Stable Token Commission (**FRNT**, **wFRNT**), SG-FORGE **CoinVertible** (**EURCV**, **USDCV**), Bridge/Stripe **EURR** (Revolut Euro) and Tether (**USDT**).
 
-The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?**
+The central question this document answers: for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?
 
 ---
 
@@ -27,8 +29,6 @@ The central question this document answers: **for each feature a real stablecoin
 10. [Gap analysis](#10-gap-analysis)
 
 ---
-
-This document compares **CMTAT against the stablecoins**. For a stablecoin-to-stablecoin comparison that does not centre on CMTAT, see [`vendor-stablecoins/SUMMARY.md`](./vendor-stablecoins/SUMMARY.md).
 
 ## 1. Sources and versions
 
@@ -148,7 +148,7 @@ CMTAT is deliberately split in two directions, and the tables below follow that 
 
 ### 3.1 What Light actually contains
 
-Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules most stablecoins never use — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, not an oversight.
+Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules stablecoins use least — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, not an oversight.
 
 A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
@@ -282,7 +282,7 @@ Chaining has a cost: policies pointed at each other would make the lookup loop, 
 
 ## 7. Access control & governance
 
-Who holds privileged rights and how those rights change hands. Role separation favours CMTAT, which gives even Light five independently grantable roles; governance tooling favours Paxos, the only project here that ships a timelock alongside the token.
+Who holds privileged rights and how those rights change hands. Every CMTAT variant uses role-based access control with independently grantable roles — five in Light, about fifteen in the heavier builds — where USDC has five one-address singletons and USDT a single `owner`. Paxos is the only project here that ships a timelock alongside the token.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -295,8 +295,8 @@ Who holds privileged rights and how those rights change hands. Role separation f
 
 **Reading.**
 
-* **Role separation favours CMTAT.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`.
-* **Governance tooling favours Paxos.** It is the only project that ships a `TimelockController` with the token, and the only one that annotates which roles can redirect funds.
+* **Role counts.** Light defines five independently grantable roles and the heavier variants about fifteen. Among the stablecoins, Wyoming comes closest with eight and EURR has six; USDC's five are singletons holding one address each, CoinVertible's three operators are immutable, and USDT has a single `owner`.
+* **Timelock and risk annotation.** Paxos is the only project here that ships a `TimelockController` in the same repository as the token, and the only one that records which roles can redirect funds in code (`Roles.sol`). CMTAT, Monerium and Wyoming record the same thing in prose only — `access-control.md`, `tokendesign.md` and a README respectively; USDC, CoinVertible, USDT and EURR do not record it at all.
 * **`Ownable2Step` is not available on the token.** It is used by four companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory) but not by CMTAT itself, so `DEFAULT_ADMIN_ROLE` transfers take effect immediately in *every* deployment, Light or not. CMTAT-LayerZero's adapters use plain `Ownable`; CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
 
 ## 8. Upgradeability & lifecycle
