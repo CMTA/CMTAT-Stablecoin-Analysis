@@ -59,7 +59,7 @@ The CMTAT and RuleEngine pins are **release candidates**: their `version()` stri
 
 > **Neither Chainlink integration is audited.** `CMTAT-ACE` states it has had **no formal audit**, static analysis and AI review only; `CMTAT-CCIP` is unaudited testnet tooling derived from Chainlink's examples repository.
 
-> **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via Taurus infrastructure ([Zand Trust](https://zandtrust.com/)).
+> **CMTAT in production as a stablecoin.** Zand Trust (2025) issued an AED stablecoin using CMTAT v3.0.0 via [Taurus](https://www.taurushq.com/blog/zand-to-launch-the-uaes-first-regulated-aed-stablecoin-on-public-blockchain-with-taurus-tokenization-and-wallet-technology/) infrastructure ([Zand Trust](https://zandtrust.com/)).
 
 ### 1.2 Third-party dependencies read directly
 
@@ -269,7 +269,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 * **The RuleEngine evaluates an ordered list.** `_detectTransferRestriction` walks the rules by index and returns the first non-zero ERC-1404 code, or `TRANSFER_OK` when all of them pass ([`RuleEngineBase.sol:166`](./cmtat/RuleEngine/src/RuleEngineBase.sol#L166)). Rules of different kinds therefore compose, and their order decides which reason a rejected transfer reports.
 * **Monerium and Wyoming each have exactly one hook**, swappable but not stackable: Monerium's `IValidator`, repointed with `setValidator` ([`Token.sol:111`](./vendor-stablecoins/monerium-smart-contracts/src/Token.sol#L111)), and Wyoming's `accessRegistry.hasAccess(account, sender, msgData)` ([`FrontierERC20F.sol:67`](./vendor-stablecoins/frontier-stable-token/contracts/FrontierERC20F.sol#L67)). A second kind of check means writing it into the one contract the hook points at.
-* **EURR is the closest, and still not the same.** Its registry is `immutable`, so the contract itself cannot be swapped — only the policy id the token queries. Its `parentPolicyId` chain composes hierarchically, but the links must share a type and `isAuthorized` resolves a single membership question through them; it is a fallback lookup, not several kinds of check evaluated in turn.
+* **EURR comes closest.** Its registry is `immutable`, so the contract itself cannot be swapped — only the policy id the token queries. Its `parentPolicyId` chain composes hierarchically, but the links must share a type and `isAuthorized` resolves a single membership question through them; it is a fallback lookup, not several kinds of check evaluated in turn.
 
 
 **CMTAT has three compliance architectures.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes:
@@ -430,7 +430,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 
 ### 10.3 CMTAT features no stablecoin in `vendor-stablecoins/` has
 
-* **ERC-1404 restriction codes** and pre-trade `canTransfer` / `detectTransferRestriction` views — every stablecoin here simply reverts.
+* **ERC-1404 restriction codes** and pre-trade `canTransfer` / `detectTransferRestriction` views — every stablecoin here reverts instead.
 * **Composable rule stacking** — Monerium and Wyoming each have *one* pluggable hook; RuleEngine runs an ordered list of them.
 * **Proof-of-reserve-gated minting** (`RuleChainlinkPoR`) — no stablecoin here ties issuance to an on-chain reserve attestation.
 * **Per-holder balance caps** and **max total supply caps** as policy rather than code.
@@ -444,7 +444,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 
 * **Beacon + CREATE2 factory deployment** (CMTAT-Factory).
 * **A bridge that can be paused independently of the token** — CMTAT-LayerZero's adapters each carry their own owner-gated `pause()`. Wyoming's OFT adapters have no such switch; halting a bridge there means pausing the token. That describes the LayerZero configuration captured in the pinned source and may no longer hold: the Commission announced a migration to Chainlink CCIP in August 2026 (see [§1.3](#13-stablecoins-analysed)).
-* **The standard is genuinely blockchain-agnostic, and the non-EVM work exists.** Every stablecoin here is Solidity-only, or ports by writing a new codebase from scratch. CMTAT is defined as a feature set and reimplemented per chain:
+* **The standard is blockchain-agnostic, and the non-EVM work exists.** Every stablecoin here is Solidity-only, or ports by writing a new codebase from scratch. CMTAT is defined as a feature set and reimplemented per chain:
   * [`CMTAT-Tezos-FA2`](./cmtat/CMTAT-Tezos-FA2/) — a SmartPy implementation on Tezos' FA2 standard, implemented by AirGap ([`airgap-it/CMTAT-FA2`](https://github.com/airgap-it/CMTAT-FA2)) for the Tezos Foundation, which holds the copyright, and audited by Inference. FA2 holds several tokens per contract, so it renames CMTAT's `owner` to *token admin* and extends entry points to take lists for batching. Pinned at 2023, well before CMTAT v3, so treat it as a separate lineage rather than a port of the code compared here.
   * [`private-CMTAT-aztec`](./cmtat/private-CMTAT-aztec/) — Noir, on the Aztec privacy L2.
   * [`CMTAT-Solana`](./cmtat/CMTAT-Solana/) — a v1.0.0 specification mapping the feature set onto SPL Token-2022 extensions (permanent delegate, transfer hook, default account state). Guidance, not a program: Wyoming ships the only running Solana code here, and that is a bridge endpoint rather than the token.
@@ -452,7 +452,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
   * **Not every bridge speaks ERC-7802**, so the interface alone does not make a token portable. A bridge with its own protocol needs an adapter in between, which is what `CMTAT-LayerZero` ships: `LayerZeroAdapterERC7802` presents LayerZero's OFT to an ERC-7802 token, and `LayerZeroAdapter` does the same for the ERC-3643 mint/burn interface that *every* CMTAT version implements ([`CMTAT-LayerZero/README.md` §Adapter Selection](./cmtat/CMTAT-LayerZero/)). CMTAT has working tooling for both LayerZero and CCIP.
 
 * **Compliance as runtime configuration** (CMTAT-ACE) — an ordered list of *heterogeneous* policies attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook, and **EURR goes furthest of the stablecoins here**: `setTransferPolicyId` / `setMintRecipientPolicyId` repoint screening at a different policy, and a policy admin can re-chain with `modifyParentPolicy`, all without an upgrade.
-  * What EURR cannot do is add a *different kind* of check — `_validateParentPolicy` requires every link in a chain to share the parent's type, and `isAuthorized` only ever resolves address membership, so a volume cap or a trading-hours window has no way in without touching the token.
+  * EURR cannot add a *different kind* of check — `_validateParentPolicy` requires every link in a chain to share the parent's type, and `isAuthorized` only ever resolves address membership, so a volume cap or a trading-hours window has no way in without touching the token.
 
 * **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor-stablecoins/`, and neither is in the token: both are available to a CMTAT deployment only through **CMTAT-ACE**, which is a separate token build on a heavier CMTAT base and needs Chainlink's `PolicyEngine` deployed alongside it. Not available to Light.
 * **A token that can be recomposed rather than forked.** 25 modules and a layered base chain mean an issuer can assemble a variant that matches their requirements, and an integrator can add features CMTAT never shipped — as `SnapshotEngine` and `CMTAT-ACE` both do. The stablecoins here are fixed inheritance chains; Paxos comes closest with its diamond facets, but those are Paxos's own facets, not a kit anyone else builds with.
