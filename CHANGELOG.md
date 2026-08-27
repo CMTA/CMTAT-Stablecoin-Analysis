@@ -23,7 +23,7 @@ See [https://semver.org](https://semver.org)
 - `Fixed` for any bug fixes.
 - `Security` in case of vulnerabilities.
 
-## [0.1.0] - 2026-08-26
+## [0.1.0] - 2026-08-27
 
 First release.
 
