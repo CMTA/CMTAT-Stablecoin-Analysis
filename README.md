@@ -8,7 +8,7 @@
 
 Feature-by-feature comparison between **CMTAT** and seven production stablecoin codebases whose source is vendored in this repository: Circle (**USDC**, **EURC**), Paxos (**USDP**, **USDG**, **PYUSD**, **PAXG**), Monerium (**EURe**, **GBPe**, **USDe**, **ISKe**), the Wyoming Stable Token Commission (**FRNT**, **wFRNT**), SG-FORGE **CoinVertible** (**EURCV**, **USDCV**), Bridge/Stripe **EURR** (Revolut Euro) and Tether (**USDT**).
 
-The central question this document answers: for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?
+Issuing a stablecoin on a blockchain means deciding how it will be represented on-chain and which features it needs. This document works through that decision by extracting the features the major stablecoins actually ship, then asking of each one: does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?
 
 ---
 
