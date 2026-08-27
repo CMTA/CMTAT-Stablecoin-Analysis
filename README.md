@@ -287,7 +287,14 @@ Reading [`AuthRegistry`](./vendor-stablecoins/eurr/) itself settles what the pol
 
 Chaining has a cost: policies pointed at each other would make the lookup loop, and every EURR transfer would fail until an admin broke the cycle.
 
-**Light gets `forcedBurn`; every other variant gets `forcedTransfer`, which covers both operations.** Sending to `address(0)` makes `forcedTransfer` burn instead of move, so a non-Light deployment can seize *and* destroy through one entry point, matching what Paxos and CoinVertible get from `wipeFrozenAddress` and USDT from `destroyBlackFunds`. **Light is the constrained one**: it can burn, but never move a position to a recovery address, and only from an account already frozen.
+**Light gets `forcedBurn`; every other variant gets `forcedTransfer`, which covers both operations.** Sending to `address(0)` makes `forcedTransfer` burn instead of move, so a non-Light deployment can seize *and* destroy through one entry point. **Light is the constrained one**: it can burn, but never move a position to a recovery address, and only from an account already frozen.
+
+The stablecoin equivalents destroy a balance too, but none of them does it by transferring to the zero address, and none is a general-purpose seizure tool:
+
+* **They take no destination.** [`wipeFrozenAddress(address)`](./vendor-stablecoins/paxos-token-contracts/contracts/PaxosTokenV2.sol#L289) and [`destroyBlackFunds(address)`](./vendor-stablecoins/usdt_eth_0xdac17f958d2ee523a2206206994597c13d831ec7_code/TetherToken.sol#L287) zero the balance and decrement total supply directly; CoinVertible's [`wipeFrozenAddress`](./vendor-stablecoins/cv_eth_0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b_code/contracts/smartCoin/SmartCoin.sol#L90) calls `_burn`. Paxos and CoinVertible emit `Transfer(addr, address(0), balance)` as the conventional burn event; USDT emits only `DestroyedBlackFunds`, so its burns are invisible to an indexer watching `Transfer`.
+* **They take no amount.** All three wipe the holder's entire balance. `forcedTransfer` takes a `value`, so a CMTAT enforcer can destroy part of a position.
+* **All three require the account to be frozen or blacklisted first**, which `forcedTransfer` does not — on that precondition Light's `forcedBurn` is the closer match to the stablecoins than the variants that replace it.
+
 
 ## 7. Access control & governance
 
