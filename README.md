@@ -93,6 +93,8 @@ The Etherscan dumps capture a single **implementation** contract each, not a ful
 >
 > Re-check the deployed bytecode before relying on any of this operationally.
 
+> **Monerium — which of the four tokens are live.** Monerium's token documentation lists only **EURe** and **GBPe** ([docs.monerium.com/tokens](https://docs.monerium.com/tokens/)), so **USDe** and **ISKe** may no longer be issued. The contracts here are a single `Token.sol` deployed behind four proxies, so this changes nothing about the code analysed below — but a reader treating the four as equally current should check first.
+>
 > **Wyoming — `frontier-stable-token`.** The Commission announced a migration from LayerZero to **Chainlink CCIP** in August 2026 ([press release](https://www.prnewswire.com/news-releases/wyoming-stable-token-commission-migrates-to-chainlink-ccip-for-enhanced-operational-security-302854502.html)). This snapshot still reflects the LayerZero architecture, so every FRNT / wFRNT cross-chain statement below describes the OFT design, not the one now in production.
 
 ## 2. How to read the tables
