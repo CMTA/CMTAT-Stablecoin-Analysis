@@ -2,7 +2,7 @@
 
 **Version 0.1.0**
 
-**CMTA** ([Capital Markets and Technology Association](https://www.cmta.ch/)) is a Swiss non-profit that publishes standards for tokenising financial instruments. 
+**CMTA** ([Capital Markets and Technology Association](https://www.cmta.ch/)) is a Swiss non-profit that publishes standards for tokenising financial instruments.
 
 **CMTAT** (CMTA Token) is its open-source, blockchain-agnostic **security-token framework**: an [ERC-20](https://eips.ethereum.org/EIPS/eip-20) extended with the controls a regulated instrument needs — global pause, permanent deactivation, account and partial-balance freeze, controlled mint/burn, forced transfer, pluggable transfer validation, on-chain legal documents and optional cross-chain entry points. The [Solidity reference implementation](https://github.com/CMTA/CMTAT) read here is modular: 25 modules assembled into 21 deployment variants, standalone or upgradeable, plus seven companion projects that extend the token from outside.
 
@@ -107,7 +107,7 @@ CMTAT is not one contract, so each table splits it into **three** columns. Light
 
 > ### What minimalism costs: Light cannot use the companion contracts
 >
-> Keeping Light small means leaving out the setters the companion projects plug into, so most of the Companion column is unavailable to it. **CMTAT-Factory is the only companion Light can definitely use.** (Evidence, for readers who want it: Light is built on [`0_CMTATBaseCore`](./cmtat/CMTAT/contracts/modules/0_CMTATBaseCore.sol), every other variant on a larger base.)
+> Keeping Light small means leaving out the setters the companion projects plug into, so most of the Companion column is unavailable to it. **CMTAT-Factory is the only companion Light can use.**
 >
 > | Companion | From Light? | Why |
 > | --- | --- | --- |
@@ -148,7 +148,9 @@ CMTAT is deliberately split in two directions, and the tables below follow that 
 
 ### 3.1 What Light actually contains
 
-Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules stablecoins use least — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, made to give issuers a choice of variant rather than one contract carrying every feature.
+Light is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules stablecoins use least — documents, snapshots, partial freeze, debt fields, cross-chain bridges.
+
+A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, made to give issuers a choice of variant rather than one contract carrying every feature.
 
 A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
@@ -172,7 +174,9 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 4. Token standards & signature flows
 
-Which ERC interfaces each token actually implements — the ERC-20 surface, the three signature flows (ERC-2612, [ERC-3009](https://eips.ethereum.org/EIPS/eip-3009), [ERC-1271](https://eips.ethereum.org/EIPS/eip-1271)), the tokenisation standards ([ERC-1404](https://github.com/ethereum/EIPs/issues/1404), [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-7551](https://ethereum-magicians.org/t/erc-7551-crypto-security-token-smart-contract-interface-ewpg-reworked/25477) / [ERC-7943](https://eips.ethereum.org/EIPS/eip-7943), [ERC-7802](https://eips.ethereum.org/EIPS/eip-7802)) and the storage layout. CMTAT implements more of the tokenisation standards than any stablecoin here, Light implements plain ERC-20 plus batch helpers, and ERC-3009 is absent from the whole stack.
+Which ERC interfaces each token actually implements — the ERC-20 surface, the three signature flows (ERC-2612, [ERC-3009](https://eips.ethereum.org/EIPS/eip-3009), [ERC-1271](https://eips.ethereum.org/EIPS/eip-1271)), the tokenisation standards ([ERC-1404](https://github.com/ethereum/EIPs/issues/1404), [ERC-3643](https://eips.ethereum.org/EIPS/eip-3643), [ERC-7551](https://ethereum-magicians.org/t/erc-7551-crypto-security-token-smart-contract-interface-ewpg-reworked/25477) / [ERC-7943](https://eips.ethereum.org/EIPS/eip-7943), [ERC-7802](https://eips.ethereum.org/EIPS/eip-7802)) and the storage layout.
+
+CMTAT implements more of the tokenisation standards than any stablecoin here, Light implements plain ERC-20 plus batch helpers, and ERC-3009 is absent from the whole stack.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -197,15 +201,14 @@ Which ERC interfaces each token actually implements — the ERC-20 surface, the 
 * Its **ERC-3643** support is partial by design. The interface it implements is named [`IERC3643Partial`](./cmtat/CMTAT/contracts/interfaces/tokenization/IERC3643Partial.sol) and covers the token-side calls — pause, freeze, mint/burn, batch, compliance callbacks. CMTAT's own README describes it as ERC-3643 "without on-chain identity", and nothing in `cmtat/CMTAT/contracts/` references an identity registry or ONCHAINID. A deployment that must satisfy ERC-3643 in full needs an identity layer built alongside it, and `Rules` ships both sides of it ([`Rules/README.md` §"Identity verification"](./cmtat/Rules/README.md)):
   * `RuleIdentityRegistry` asks the question — a transfer rule that calls `isVerified` on whatever registry it is pointed at and blocks the transfer when the answer is no. Because CMTAT has no identity slot of its own, this rule behind a RuleEngine is the **only** way to apply identity-registry screening to a CMTAT token.
   * `IdentityRegistryWhitelist` answers it — a registry implementation that replies from a whitelist instead of reading ONCHAINIDs, so no identity contracts need deploying. It is not a rule and never goes into a RuleEngine; it plugs into any ERC-3643 token's identity slot via `setIdentityRegistry`, or backs `RuleIdentityRegistry` on a CMTAT token.
-* Every stablecoin except CoinVertible and USDT ships `permit`. CMTAT provides it through a dedicated **Permit** deployment version ([`CMTATStandalonePermit`](./cmtat/CMTAT/contracts/deployment/permit/CMTATStandalonePermit.sol) / [`CMTATUpgradeablePermit`](./cmtat/CMTAT/contracts/deployment/permit/CMTATUpgradeablePermit.sol), built on `6_CMTATBaseERC2612`) — neither Light nor the Standard variant carries it. 
+* Every stablecoin except CoinVertible and USDT ships `permit`. CMTAT provides it through a dedicated **Permit** deployment version ([`CMTATStandalonePermit`](./cmtat/CMTAT/contracts/deployment/permit/CMTATStandalonePermit.sol) / [`CMTATUpgradeablePermit`](./cmtat/CMTAT/contracts/deployment/permit/CMTATUpgradeablePermit.sol), built on `6_CMTATBaseERC2612`) — neither Light nor the Standard variant carries it.
   * Keeping ERC-2612 out of the default builds is deliberate: `permit` signatures have been a recurring vector in wallet-drainer phishing, where a victim is induced to sign an off-chain approval that the attacker then submits, so an issuer opts into that surface rather than inheriting it. The trade-off is the one noted in [§3](#3-the-cmtat-stack): Permit and Standard are mutually exclusive, so opting into `permit` forfeits ERC-2771 meta-transactions.
 
-
-**ERC-3009 is absent from the entire stack**, Light and companion projects alike, and it is the one signature standard both Circle and Paxos ship. CMTA has it on the roadmap as a dedicated deployment version ([CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346)); the status below reflects the code pinned here, not the roadmap.
+**ERC-3009** is absent from the entire stack, Light and companion projects alike, and it is the one signature standard both Circle and Paxos ship. CMTA has it on the roadmap as a dedicated deployment version ([CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346)); the status below reflects the code pinned here, not the roadmap.
 
 ## 5. Supply control (issuance)
 
-How much a minter may issue and what bounds it: allowances, rate limits, supply caps, proof-of-reserve gating, and whether minter management sits in a separate contract. 
+How much a minter may issue and what bounds it: allowances, rate limits, supply caps, proof-of-reserve gating, and whether minter management sits in a separate contract.
 
 Circle, Paxos and Monerium each cap what one compromised minter key can do; no CMTAT variant does so on its own, and every equivalent lives in a companion project, not available with the Light version.
 
@@ -234,7 +237,9 @@ Circle, Paxos and Monerium each cap what one compromised minter key can do; no C
 
 ## 6. Compliance & enforcement
 
-Freezing, pausing, seizure and transfer screening. Light's in-token model matches USDT's; everything richer — shared blacklists, sanctions oracles, whitelists, identity binding — requires the RuleEngine, and `CMTAT-ACE` adds a third architecture in which compliance is a per-selector policy list changed by governance rather than by upgrade.
+Common and basic compliance features include the following: freezing, pausing, seizure and transfer screening. These features are available in USDT, a lightweight stablecoin, as well as in Light's in-token model, which matches USDT's.
+
+More complex functionality such as shared blacklists, sanctions oracles, whitelists and identity binding requires the RuleEngine in the CMTAT ecosystem, and `CMTAT-ACE` adds a third architecture in which compliance is a per-selector policy list changed by governance rather than by upgrade.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -258,16 +263,16 @@ Freezing, pausing, seizure and transfer screening. Light's in-token model matche
 | Identity registry / KYC binding | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> no identity-registry slot on the token | <strong><span style="color: #b26a00; font-size: 1.25em;">&#x26A0;</span></strong> **Rules** ships `IdentityRegistryWhitelist` and `RuleIdentityRegistry`, but they fill an **ERC-3643** token's identity slot; on CMTAT, screening goes through the RuleEngine instead | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b26a00; font-size: 1.25em;">&#x26A0;</span></strong> off-chain | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b26a00; font-size: 1.25em;">&#x26A0;</span></strong> via registry policies |
 | Standardised enforcement events | <strong><span style="color: #b26a00; font-size: 1.25em;">&#x26A0;</span></strong> `ForcedTransfer` event only | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> ERC-7551 / ERC-7943 | — | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> |
 
-**Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. That is enough for a plain fiat stablecoin, and it is the case CMTA's documentation makes.
+**Reading.** Light's compliance model is exactly USDT's: an in-token address blacklist, a global pause, and a way to destroy a blacklisted balance — a modern, role-separated reimplementation of the 2017 design, plus permanent deactivation and pre-trade views that USDT lacks. Those are the minimal features generally found in all stablecoins.
 
 Everything beyond that lives in `Rules`: shared blacklists, sanctions screening, whitelists, balance caps, per-transfer approval, identity binding. **All of it requires leaving Light.** Once you do, the model differs from every stablecoin here: Monerium and Wyoming each have *one* pluggable hook, while the RuleEngine runs an ordered, composable stack of them.
 
-**CMTAT has three compliance architectures, not two.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes:
+**CMTAT has three compliance architectures.** Beyond in-token enforcement and the RuleEngine, `CMTAT-ACE` routes protected calls through Chainlink's ACE `PolicyEngine`, where compliance is a list of policies attached per function selector and changed by governance rather than by upgrade. It ships in two shapes:
 
 * **Lite** — swaps the RuleEngine for the PolicyEngine on transfer validation, and keeps CMTAT's roles.
 * **Standard** — policy-authoritative: ACE gates mint, burn, transfer, enforcement and admin, and the token drops `AccessControlUpgradeable` for `OwnableUpgradeable`. That is a real trade-off, giving up the granular RBAC that is otherwise one of CMTAT's advantages over USDC and USDT.
 
-**EURR externalises compliance further than any other token here.** Both of its checks resolve through one external contract:
+**EURR** externalises its compliance checks to a single external contract:
 
 * `isBlocked(a)` is `!AUTH_REGISTRY.isAuthorized(transferPolicyId, a)`, and `isMintRecipient(a)` is `isAuthorized(mintRecipientPolicyId, a)`. Nothing else in the token screens an address.
 * The registry is addressed by **policy id**, and both ids are settable by the token admin, so one registry serves many policies and the token chooses which governs transfers and which governs minting — closer to CMTAT-ACE's per-selector model than to Monerium's single validator.
@@ -275,7 +280,7 @@ Everything beyond that lives in `Rules`: shared blacklists, sanctions screening,
 
 Reading [`AuthRegistry`](./vendor-stablecoins/eurr/) itself settles what the policies mean:
 
-* **A policy is typed `WHITELIST` or `BLACKLIST`, so EURR is whichever its configured policy says.** `isAuthorized` returns `policyType == WHITELIST` for a listed account and `policyType == BLACKLIST` for an unlisted one — allow-by-default under a blacklist, deny-by-default under a whitelist. The same token code is an allowlist or a blocklist depending on a policy id its admin can change.
+* A policy is typed `WHITELIST` or `BLACKLIST`, so EURR is whichever its configured policy says. `isAuthorized` returns `policyType == WHITELIST` for a listed account and `policyType == BLACKLIST` for an unlisted one — allow-by-default under a blacklist, deny-by-default under a whitelist. The same token code is an allowlist or a blocklist depending on a policy id its admin can change.
 * **Policies chain.** A policy may name a `parentPolicyId` of the same type; an account not found in the child is looked up in the parent, recursively. That composes hierarchies — a base list plus per-product overrides — which none of the other externalised designs here can express.
 * **Ids 0 and 1 are reserved** as always-reject and always-allow, so an admin can disable or bypass screening by pointing the token at a constant.
 * **The registry has no owner or roles of its own.** `createPolicy` is unpermissioned, and each policy is administered by the address named at creation (transferable in one step via `setPolicyAdmin`). Trust flows through the policy id the token admin selects, not through the registry contract.
@@ -359,18 +364,24 @@ Everything outside the transfer path: yield, bridging, and the securities-orient
 
 **Reading.**
 
-* **Light is stripped of all of this, and for a plain fiat stablecoin that is the right call.** None of the seven stablecoins has documents, snapshots or holder lists either.
-* **Light gives up cross-chain too, which is easier to miss.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the seven stablecoins here are multi-chain (CoinVertible and EURR are the exceptions), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
+* **Light** is stripped of all of this, and a plain fiat stablecoin needs none of it: none of the seven stablecoins has documents, snapshots or holder lists either.
+* **Light** does not include cross-chain either: ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the seven stablecoins here are multi-chain (CoinVertible and EURR are the exceptions), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
 ## 10. Gap analysis
 
-The tables above rearranged into three lists: what a CMTAT issuer can have only by deploying a companion project (10.1), what nothing in the CMTA ecosystem provides (10.2), and what CMTAT has that no stablecoin here does (10.3). Section 10.4 turns those into a recommendation for an issuer choosing a variant.
+The tables above rearranged into three lists:
+
+- What a CMTAT issuer can have only by deploying a companion project (10.1)
+- What nothing in the CMTA ecosystem provides (10.2)
+- What CMTAT has that no stablecoin here does (10.3)
+
+Section 10.4 turns those into a recommendation for an issuer choosing a variant.
 
 ### 10.1 Stablecoin features the CMTA stack covers outside the token
 
-These are all available to a CMTAT issuer, but none of them live in the token contract: each needs a companion project deployed and wired alongside it. The last column matters most in practice, because CMTA's own guidance points stablecoin issuers at Light.
+These are all available to a CMTAT issuer, but none of them live in the token contract: each needs a companion project deployed and wired alongside it.
 
 | Feature | Who has it | CMTAT answer | From Light? |
 | --- | --- | --- | --- |
@@ -387,11 +398,7 @@ These are all available to a CMTAT issuer, but none of them live in the token co
 | Per-recipient volume cap per period | none | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> **CMTAT-ACE** `VolumeRatePolicy` | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> separate token build |
 | Compliance changed by configuration, not upgrade | Monerium, Wyoming (one hook each), EURR (repointable policy ids + parent chain) | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> **CMTAT-ACE** policy attach/detach/reorder | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> separate token build |
 
-**`CMTAT-Factory` is the only companion project a Light deployment can definitely use:**
-
-* RuleEngine and every rule need `setRuleEngine`, which Light does not have.
-* SnapshotEngine needs either `setSnapshotEngine`, also absent, or its in-token variants, which start from a heavier CMTAT base.
-* CMTAT-LayerZero's ERC-3643 adapter may work with Light, but nothing in that repository tests it.
+Note: `CMTAT-Factory` is the only companion project a Light deployment can use.
 
 ### 10.2 Stablecoin features the CMTA ecosystem does not provide
 
@@ -419,7 +426,10 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 * **On-chain snapshots** for dividend distribution (SnapshotEngine).
 * **On-chain legal documents** ([ERC-1643](https://github.com/ethereum/EIPs/issues/1643)) and token metadata (ISIN, terms).
 * **Standardised enforcement events** (ERC-7551 / ERC-7943).
-* **Confidential balances**, by two different routes: `CMTAT-Confidential` keeps the token on the EVM and encrypts balances with Zama FHE; `private-CMTAT-aztec` reimplements it in Noir on the Aztec privacy L2, where transactions stay private to holders while the issuer keeps an audit view. The Aztec build is an unaudited prototype and its README warns that Aztec itself is still changing rapidly.
+* **Confidential balances**, by two different routes:
+  *  `CMTAT-Confidential` keeps the token on the EVM, encrypts balances with Zama FHE and has been audited by OpenZeppelin;
+  * `private-CMTAT-aztec` reimplements it in Noir on the Aztec privacy L2, where transactions stay private to holders while the issuer keeps an audit view. The Aztec build is an unaudited prototype.
+
 * **Beacon + CREATE2 factory deployment** (CMTAT-Factory).
 * **A bridge that can be paused independently of the token** — CMTAT-LayerZero's adapters each carry their own owner-gated `pause()`. Wyoming's OFT adapters have no such switch; halting a bridge there means pausing the token. That describes the LayerZero configuration captured in the pinned source and may no longer hold: the Commission announced a migration to Chainlink CCIP in August 2026 (see [§1.3](#13-stablecoins-analysed)).
 * **The standard is genuinely blockchain-agnostic, and the non-EVM work exists.** Every stablecoin here is Solidity-only, or ports by writing a new codebase from scratch. CMTAT is defined as a feature set and reimplemented per chain:
@@ -427,7 +437,9 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
   * [`private-CMTAT-aztec`](./cmtat/private-CMTAT-aztec/) — Noir, on the Aztec privacy L2.
   * [`CMTAT-Solana`](./cmtat/CMTAT-Solana/) — a v1.0.0 specification mapping the feature set onto SPL Token-2022 extensions (permanent delegate, transfer hook, default account state). Guidance, not a program: Wyoming ships the only running Solana code here, and that is a bridge endpoint rather than the token.
 * **Bridge-agnostic cross-chain entry points** — ERC-7802 is a standard interface any bridge can drive; every stablecoin here is wired to one specific bridge (CCTP for Circle, LayerZero for Wyoming). CMTAT has working tooling for both LayerZero and CCIP.
-* **Compliance as runtime configuration** (CMTAT-ACE) — an ordered list of *heterogeneous* policies attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook, and **EURR goes furthest of the stablecoins here**: `setTransferPolicyId` / `setMintRecipientPolicyId` repoint screening at a different policy, and a policy admin can re-chain with `modifyParentPolicy`, all without an upgrade. What EURR cannot do is add a *different kind* of check — `_validateParentPolicy` requires every link in a chain to share the parent's type, and `isAuthorized` only ever resolves address membership, so a volume cap or a trading-hours window has no way in without touching the token.
+* **Compliance as runtime configuration** (CMTAT-ACE) — an ordered list of *heterogeneous* policies attached, detached and reordered by governance per function selector. Monerium and Wyoming can swap their single hook, and **EURR goes furthest of the stablecoins here**: `setTransferPolicyId` / `setMintRecipientPolicyId` repoint screening at a different policy, and a policy admin can re-chain with `modifyParentPolicy`, all without an upgrade.
+  * What EURR cannot do is add a *different kind* of check — `_validateParentPolicy` requires every link in a chain to share the parent's type, and `isAuthorized` only ever resolves address membership, so a volume cap or a trading-hours window has no way in without touching the token.
+
 * **Trading-hours windows** (`IntervalPolicy`) and **per-holder rolling volume caps** (`VolumeRatePolicy`) — neither has any counterpart in `vendor-stablecoins/`, and neither is in the token: both are available to a CMTAT deployment only through **CMTAT-ACE**, which is a separate token build on a heavier CMTAT base and needs Chainlink's `PolicyEngine` deployed alongside it. Not available to Light.
 * **A token that can be recomposed rather than forked.** 25 modules and a layered base chain mean an issuer can assemble a variant that matches their requirements, and an integrator can add features CMTAT never shipped — as `SnapshotEngine` and `CMTAT-ACE` both do. The stablecoins here are fixed inheritance chains; Paxos comes closest with its diamond facets, but those are Paxos's own facets, not a kit anyone else builds with.
 * **Mutable `name` / `symbol`** post-deployment.
@@ -454,9 +466,9 @@ At 11.3 KiB it is also the smallest deployment in the set.
 | Cross-chain entry points | Circle (CCTP), Wyoming (OFT), Paxos | move to a variant that implements ERC-7802 / CCIP, then add a `CMTAT-LayerZero` adapter |
 | Forced *transfer* (it has forced *burn*) | Paxos, CoinVertible | move to any non-Light variant; `forcedTransfer` replaces `forcedBurn` outright, since `address(0)` as destination burns |
 
-**The competitive configuration is Standard or Permit + RuleEngine + Rules**, which matches USDC and Monerium feature for feature and adds composable rule stacking neither has, at a reported 22–23 KiB plus two external contracts, roughly double Light's footprint.
+- **A relevant configuration is Standard or Permit + RuleEngine + Rules**, which matches USDC and Monerium feature for feature and adds composable rule stacking neither has, at a reported 22–23 KiB plus two external contracts, roughly double Light's footprint.
 
-**Four gaps survive every configuration** and must be built by the issuer: **ERC-3009**, **per-minter rate limiting**, **foreign-token rescue**, and **yield accrual**. Only ERC-3009 has a published plan, as a dedicated deployment version in [CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346).
+- Four gaps survive every configuration and must be built by the issuer: **ERC-3009**, **per-minter rate limiting**, **foreign-token rescue**, and **yield accrual**. Only ERC-3009 has a published plan, as a dedicated deployment version in [CMTAT issue #346](https://github.com/CMTA/CMTAT/issues/346).
 
 ---
 
