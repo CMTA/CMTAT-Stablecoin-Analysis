@@ -2,7 +2,9 @@
 
 **Version 0.1.0**
 
-Feature-by-feature comparison between **CMTAT** (the CMTA Token standard, Solidity/EVM implementation) and seven production stablecoin codebases whose source is vendored in this repository: Circle (**USDC**, **EURC**), Paxos (**USDP**, **USDG**, **PYUSD**, **PAXG**), Monerium (**EURe**, **GBPe**, **USDe**, **ISKe**), the Wyoming Stable Token Commission (**FRNT**, **wFRNT**), SG-FORGE **CoinVertible** (**EURCV**, **USDCV**), Bridge/Stripe **EURR** (Revolut Euro) and Tether (**USDT**).
+**CMTA** ([Capital Markets and Technology Association](https://www.cmta.ch/)) is a Swiss non-profit that publishes standards for tokenising financial instruments. **CMTAT** (CMTA Token) is its open-source, blockchain-agnostic **security-token framework**: an ERC-20 extended with the controls a regulated instrument needs — global pause, permanent deactivation, account and partial-balance freeze, controlled mint/burn, forced transfer, pluggable transfer validation, on-chain legal documents and optional cross-chain entry points. The [Solidity reference implementation](https://github.com/CMTA/CMTAT) read here is modular: 25 modules assembled into 21 deployment variants, standalone or upgradeable, plus seven companion projects that extend the token from outside.
+
+Feature-by-feature comparison between **CMTAT** and seven production stablecoin codebases whose source is vendored in this repository: Circle (**USDC**, **EURC**), Paxos (**USDP**, **USDG**, **PYUSD**, **PAXG**), Monerium (**EURe**, **GBPe**, **USDe**, **ISKe**), the Wyoming Stable Token Commission (**FRNT**, **wFRNT**), SG-FORGE **CoinVertible** (**EURCV**, **USDCV**), Bridge/Stripe **EURR** (Revolut Euro) and Tether (**USDT**).
 
 The central question this document answers: **for each feature a real stablecoin ships, does CMTAT have it, and if not in the token itself, does one of the seven CMTA companion projects provide it?**
 
