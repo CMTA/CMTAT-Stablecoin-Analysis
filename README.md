@@ -148,7 +148,7 @@ CMTAT is deliberately split in two directions, and the tables below follow that 
 
 ### 3.1 What Light actually contains
 
-Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules stablecoins use least — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, not an oversight.
+Light is not a cut-down Standard: it is a separate build whose stated purpose is to give an issuer the smallest CMTAT that still does the job, leaving out the modules stablecoins use least — documents, snapshots, partial freeze, debt fields, cross-chain bridges. A <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> in the Light column below is a design decision, made to give issuers a choice of variant rather than one contract carrying every feature.
 
 A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
