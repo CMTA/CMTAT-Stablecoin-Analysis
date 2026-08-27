@@ -30,6 +30,8 @@ This document compares **CMTAT against the stablecoins**. For a stablecoin-to-st
 
 ## 1. Sources and versions
 
+Every source this comparison reads, with the exact commit or address it was read at: the CMTAT stack, the third-party dependencies behind it, and the seven stablecoin codebases.
+
 The analysis below is based on the code pinned in [`CMTA/CMTAT-Stablecoin-Analysis`](https://github.com/CMTA/CMTAT-Stablecoin-Analysis), the repository assembled for this comparison, rather than on marketing material or third-party summaries. All submodule pins are the commits recorded in that repository's index, taken from `git submodule status`; run `git submodule update --init --recursive` to reproduce them.
 
 ### 1.1 CMTAT and its companion projects
@@ -122,7 +124,7 @@ Stablecoin column abbreviations: **USDC** = Circle, **PAX** = Paxos, **MON** = M
 
 ## 3. The CMTAT stack
 
-CMTAT is deliberately split in two directions, and knowing what each part owns is the key to reading the tables.
+CMTAT is deliberately split in two directions, and the tables below follow that split.
 
 * **Across repositories** — the token plus the seven companion projects that plug into it. The table below is the inventory.
 * **Within the token** — 25 modules under `contracts/modules/wrapper/` (core, extensions, options, controllers, security), sitting behind a layered set of base contracts.
@@ -168,6 +170,8 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 4. Token standards & signature flows
 
+Which ERC interfaces each token actually implements — the ERC-20 surface, the three signature flows (ERC-2612, ERC-3009, ERC-1271), the tokenisation standards (ERC-1404, ERC-3643, ERC-7551 / ERC-7943, ERC-7802) and the storage layout. CMTAT implements more of the tokenisation standards than any stablecoin here, Light implements plain ERC-20 plus batch helpers, and ERC-3009 is absent from the whole stack.
+
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ERC-20 with standard return values | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | — | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> no `return` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> |
@@ -197,6 +201,8 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 ## 5. Supply control (issuance)
 
+How much a minter may issue and what bounds it: allowances, rate limits, supply caps, proof-of-reserve gating, and whether minter management sits in a separate contract. Circle, Paxos and Monerium each cap what one compromised minter key can do; no CMTAT variant does so on its own, and every equivalent lives in a companion project Light cannot reach.
+
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Role-gated mint | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `MINTER_ROLE` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> | — | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> minters | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `SUPPLY_CONTROLLER_ROLE` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `system` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `MINTER_ROLE` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> registrar only | <strong><span style="color: #b26a00; font-size: 1.25em;">&#x26A0;</span></strong> `owner` only | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `MINTER_ROLE` |
@@ -215,12 +221,14 @@ A single base contract, `0_CMTATBaseCore`, bundles the whole feature set:
 
 * **Light gates minting on `MINTER_ROLE` and nothing else** — no allowance, no cap, no rate limit. Circle, Paxos and Monerium each bound how much a single compromised minter key can issue; Light does not, and neither does any other CMTAT variant on its own.
 * **The companion projects close most of the gap.** `RuleMintAllowance` matches USDC's `minterAllowance`, and `RuleChainlinkPoR` ties issuance to an on-chain reserve attestation, which none of the seven stablecoins does.
-  * Those rules are used through CMTAT's RuleEngine module (`ValidationModuleRuleEngine`, which enters the chain at `3_CMTATBaseRuleEngine`), so none of them is reachable from Light. An issuer who wants USDC-grade minter controls moves to Standard or Permit, which adds roughly 11 KiB of bytecode and two external contracts to deploy and govern.
+  * Those rules are used through CMTAT's RuleEngine module (`ValidationModuleRuleEngine`), so none of them is reachable from Light. An issuer who wants USDC-grade minter controls moves to Standard or Permit, which adds roughly 11 KiB of bytecode and two external contracts to deploy and govern.
 * **Paxos's rate limit has no off-the-shelf equivalent.** CMTAT-ACE's `VolumeRatePolicy` is the closest thing in the stack, and differs on two counts:
   * *Wrong subject.* It keys on an address supplied by the extractor, and for `mint(address,uint256)` the shipped `MintBurnExtractor` exports the **recipient**, never the caller. Attaching it to `mint` caps how much each address can receive per period, not how much a minter can issue; bounding the minter needs a custom extractor.
   * *Different mechanics.* `VolumeRatePolicy` uses a fixed tumbling period (`block.timestamp / timePeriodDuration`); Paxos's `RateLimit.sol` is a continuously refilling bucket (`refillPerSecond`), which never restores a full allowance at a boundary.
 
 ## 6. Compliance & enforcement
+
+Freezing, pausing, seizure and transfer screening. Light's in-token model matches USDT's; everything richer — shared blacklists, sanctions oracles, whitelists, identity binding — requires the RuleEngine, and `CMTAT-ACE` adds a third architecture in which compliance is a per-selector policy list changed by governance rather than by upgrade.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -268,9 +276,11 @@ Reading [`AuthRegistry`](./vendor-stablecoins/eurr/) itself settles what the pol
 
 Chaining has a cost: policies pointed at each other would make the lookup loop, and every EURR transfer would fail until an admin broke the cycle.
 
-**Light gets `forcedBurn`; every other variant gets `forcedTransfer`, which covers both operations.** Sending to `address(0)` makes `forcedTransfer` burn instead of move, so a non-Light deployment can seize *and* destroy through one entry point — the same reach Paxos and CoinVertible get from `wipeFrozenAddress` and USDT from `destroyBlackFunds`. The asymmetry runs the other way: **Light is the constrained one**, able to burn but never to move a position to a recovery address, and only from an account frozen beforehand.
+**Light gets `forcedBurn`; every other variant gets `forcedTransfer`, which covers both operations.** Sending to `address(0)` makes `forcedTransfer` burn instead of move, so a non-Light deployment can seize *and* destroy through one entry point — the same reach Paxos and CoinVertible get from `wipeFrozenAddress` and USDT from `destroyBlackFunds`. **Light is the constrained one**: it can burn, but never move a position to a recovery address, and only from an account already frozen.
 
 ## 7. Access control & governance
+
+Who holds privileged rights and how those rights change hands. Role separation favours CMTAT, which gives even Light five independently grantable roles; governance tooling favours Paxos, the only project here that ships a timelock alongside the token.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -285,9 +295,11 @@ Chaining has a cost: policies pointed at each other would make the lookup loop, 
 
 * **Role separation favours CMTAT.** Light already separates five independently grantable roles, against USDC's five one-address-each singletons and USDT's single `owner`.
 * **Governance tooling favours Paxos.** It is the only project that ships a `TimelockController` with the token, and the only one that annotates which roles can redirect funds.
-* **`Ownable2Step` never reaches the token.** It exists on four companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory) but not on CMTAT itself, so `DEFAULT_ADMIN_ROLE` transfers take effect immediately in *every* deployment, Light or not. CMTAT-LayerZero's adapters use plain `Ownable`; CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
+* **`Ownable2Step` is not available on the token.** It is used by four companion contracts (RuleEngine, Rules, SnapshotEngine, CMTAT-Factory) but not by CMTAT itself, so `DEFAULT_ADMIN_ROLE` transfers take effect immediately in *every* deployment, Light or not. CMTAT-LayerZero's adapters use plain `Ownable`; CMTAT-ACE's Standard build uses `OwnableUpgradeable`.
 
 ## 8. Upgradeability & lifecycle
+
+Deployment patterns, upgrade authority and end-of-life. Light keeps almost every row, and CMTAT-Factory adds beacon fleet upgrades and CREATE2 addresses that no stablecoin here has. Two concrete misses follow the table: there is no UUPS Light variant, and nothing in the whole stack can recover a foreign ERC-20 sent to the token.
 
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -315,6 +327,8 @@ Two concrete misses, both variant-independent:
 
 ## 9. Yield, cross-chain and extras
 
+Everything outside the transfer path: yield, bridging, and the securities-oriented extras (snapshots, legal documents, holder lists, ISIN and terms). No part of the CMTAT stack pays holders a yield, and Light has no cross-chain entry points, which for a multi-chain issuer is the most likely reason to leave it.
+
 | Feature | Light | CMTAT | Companion | USDC | PAX | MON | FRNT | CV | USDT | EURR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | On-chain balance snapshots | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> no `setSnapshotEngine` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> `Snapshot` variant / `setSnapshotEngine` | <strong><span style="color: #1e7e34; font-size: 1.25em;">&#x2714;</span></strong> **SnapshotEngine** — external or in-token, with a scheduler | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> | <strong><span style="color: #b00020; font-size: 1.25em;">&#x2718;</span></strong> |
@@ -338,15 +352,17 @@ Two concrete misses, both variant-independent:
 **Reading.**
 
 * **Light is stripped of all of this, and for a plain fiat stablecoin that is the right call.** None of the seven stablecoins has documents, snapshots or holder lists either.
-* **What Light also gives up, less obviously, is cross-chain.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the seven stablecoins here are multi-chain (CoinVertible and EURR are the exceptions), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
+* **Light gives up cross-chain too, which is easier to miss.** ERC-7802 and the CCIP module are absent from it, so a Light token has no standard bridge entry points. Five of the seven stablecoins here are multi-chain (CoinVertible and EURR are the exceptions), which makes this the most likely reason to leave Light for reasons unrelated to compliance.
 
 **No part of the CMTAT stack pays holders a yield**: neither the rebasing model (Paxos USDG) nor the ERC-4626 wrapper (Wyoming wFRNT) has a counterpart. SnapshotEngine + IncomeVault addresses periodic *distribution*, which is a different mechanism from continuously accruing balances.
 
 ## 10. Gap analysis
 
+The tables above rearranged into three lists: what a CMTAT issuer can have only by deploying a companion project (10.1), what nothing in the CMTA ecosystem provides (10.2), and what CMTAT has that no stablecoin here does (10.3). Section 10.4 turns those into a recommendation for an issuer choosing a variant.
+
 ### 10.1 Stablecoin features the CMTA stack covers outside the token
 
-These are all available to a CMTAT issuer, but none of them live in the token contract: each needs a companion project deployed and wired alongside it. The last column is the one that matters in practice, because CMTA's own guidance points stablecoin issuers at Light.
+These are all available to a CMTAT issuer, but none of them live in the token contract: each needs a companion project deployed and wired alongside it. The last column matters most in practice, because CMTA's own guidance points stablecoin issuers at Light.
 
 | Feature | Who has it | CMTAT answer | From Light? |
 | --- | --- | --- | --- |
@@ -410,7 +426,7 @@ The genuine gaps: absent from every CMTAT variant **and** from all seven compani
 
 ### 10.4 Practical conclusion for a stablecoin issuer
 
-CMTAT offers **Light** to issuers who want a minimal contract rather than the full feature set, and recommends it for stablecoins. The question is therefore not whether Light is missing things — it is missing them on purpose — but whether the things it leaves out are ones a given stablecoin needs.
+CMTAT offers **Light** to issuers who want a minimal contract rather than the full feature set, and recommends it for stablecoins. Light is missing things on purpose, so the useful test is whether a given stablecoin needs any of what was left out.
 
 **Where Light is sufficient.** For a single-chain, non-yield-bearing fiat token whose compliance need is "freeze an address and, if ordered, destroy its balance", Light matches USDT's model and adds:
 
@@ -421,7 +437,7 @@ CMTAT offers **Light** to issuers who want a minimal contract rather than the fu
 
 At 11.3 KiB it is also the smallest deployment in the set.
 
-**Where Light falls short.** Four things the stablecoins here provide and Light does not:
+**Where Light is not enough.** Four things the stablecoins here provide and Light does not:
 
 | What Light lacks | Who has it | Cost of fixing it |
 | --- | --- | --- |
