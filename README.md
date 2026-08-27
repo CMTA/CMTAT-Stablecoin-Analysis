@@ -75,13 +75,13 @@ Everything under [`vendor-stablecoins/`](./vendor-stablecoins/): four upstream r
 
 | Issuer | Token(s) | Kind | Tag | Commit / address | Date | Solidity |
 | --- | --- | --- | --- | --- | --- | --- |
-| Circle | USDC, EURC | submodule | `release-2026-08-12T202509` | `fc85788` | 2026-08-12 | 0.6.12 |
-| Paxos | USDP, USDG, PYUSD, PAXG | submodule | `v2.1.0`+3 | `674ac10` | 2026-07-29 | 0.8.28 |
-| Monerium | EURe, GBPe, USDe, ISKe | submodule | `v2.0.0`+24 | `514bee7` | 2025-08-21 | 0.8.x |
-| Wyoming | FRNT, wFRNT | submodule | *(untagged)* | `f8aa140` | 2026-04-30 | 0.8.22 |
-| SG-FORGE | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
-| Bridge (Stripe) | EURR — [Revolut Euro](https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/) | Etherscan dump | — | token impl. `0xb6De5eAb…` + registry `0x73531fc8…` | dumped 2026-08-26 | ^0.8.24 |
-| Tether | USDT | Etherscan dump | — | `0xdac17f95…` | dumped 2026-08-26 | 0.4.17 |
+| [Circle](https://www.circle.com/usdc) | USDC, EURC | submodule | `release-2026-08-12T202509` | `fc85788` | 2026-08-12 | 0.6.12 |
+| [Paxos](https://www.paxos.com/) | USDP, USDG, PYUSD, PAXG | submodule | `v2.1.0`+3 | `674ac10` | 2026-07-29 | 0.8.28 |
+| [Monerium](https://monerium.com/) | EURe, GBPe, USDe, ISKe | submodule | `v2.0.0`+24 | `514bee7` | 2025-08-21 | 0.8.x |
+| [Wyoming](https://stabletoken.wyo.gov/) | FRNT, wFRNT | submodule | *(untagged)* | `f8aa140` | 2026-04-30 | 0.8.22 |
+| [SG-FORGE](https://www.sgforge.com/product/coinvertible/) | CoinVertible EURCV, USDCV | Etherscan dump | — | impl. `0xF4ccC80C…` | dumped 2026-08-26 | 0.8.22 |
+| [Bridge](https://www.bridge.xyz/) (Stripe) | EURR — [Revolut Euro](https://www.revolut.com/en-SE/blog/post/revolut-stablecoins-eurr-eea/) | Etherscan dump | — | token impl. `0xb6De5eAb…` + registry `0x73531fc8…` | dumped 2026-08-26 | ^0.8.24 |
+| [Tether](https://tether.to/en/) | USDT | Etherscan dump | — | `0xdac17f95…` | dumped 2026-08-26 | 0.4.17 |
 
 The Etherscan dumps capture a single **implementation** contract each, not a full repository: no tests, scripts or history. See [`vendor-stablecoins/README.md`](./vendor-stablecoins/README.md).
 
